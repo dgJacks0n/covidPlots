@@ -1,0 +1,119 @@
+---
+title: "covid plots"
+author: "Donald Jackson"
+date: "3/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(lubridate)
+  library(viridis)
+})
+```
+
+```{r datasets}
+cases <- read_csv(
+  "https://joachim-gassen.github.io/data/jh_covid19_data_2020-03-24.csv",
+  col_types = cols()
+) %>%
+  mutate(date = ymd(date))
+
+demog <- read_csv(
+  "https://joachim-gassen.github.io/data/jh_add_wbank_data.csv", 
+  col_types = cols()
+)
+
+data <- left_join(cases, demog, by = "iso3c")
+
+data <- mutate(data, cases_percapita = (confirmed / population),
+               deaths_percpita = (deaths / population),
+               death_rate = (deaths/confirmed))
+
+```
+
+# Total cases
+
+```{r last_cases}
+# last reported casenumber and deaths
+
+last <- data %>%
+  group_by(country) %>%
+  arrange(desc(date)) %>%
+  slice(1) %>%
+  ungroup() 
+
+# plot cases
+ggplot(last, aes(x = fct_reorder(country, confirmed, .desc = T),
+                 y = confirmed)) +
+  labs(x = "Country", y = "Confirmed Cases",
+       title = "Confirmed Cases by Country") +
+  stat_identity() +
+  scale_y_log10() +
+  theme_minimal()
+
+```
+
+```{r cases vs population}
+last %>%
+  ggplot(aes(x = population, y = confirmed)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal()
+```
+
+```{r deaths vs cases}
+
+last %>% 
+  filter(confirmed > 1 & deaths > 1) %>% 
+  ggplot(aes(x = confirmed, y = deaths)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = "Cases", y = "Deaths", title = "Deaths vs Cases") +
+  theme_minimal()
+
+```
+
+
+# US cases
+
+```{r usa_cases}
+usa <- filter(data, iso3c == "USA")
+
+# plot cases per time
+usa %>%
+  ggplot(aes(x = date, y = confirmed)) +
+  scale_y_log10() +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  labs(title = "US Cases by Date") +
+  theme_minimal()
+
+# plot deaths
+usa %>%
+  filter(deaths > 0) %>%
+  ggplot(aes(x = date, y = deaths)) +
+  scale_y_log10() +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  labs(title = "US Deaths by Date") +
+  theme_minimal()
+
+# plot death rate over time
+usa %>%
+  filter(death_rate > 0) %>%
+  ggplot(aes(x = date, y = death_rate)) +
+  geom_point(aes(color = log10(confirmed))) +
+  scale_color_viridis() +
+  theme_minimal()
+
+```
