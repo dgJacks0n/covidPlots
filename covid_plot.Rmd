@@ -1,12 +1,27 @@
 ---
-title: "covid plots"
+title: "COVID 19 Statistics"
 author: "Donald Jackson"
-date: "3/24/2020"
-output: html_document
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    code_folding: hide
+params:
+  flagIso3c:
+    input: text
+    label: Country to highlight
+    value: USA
 ---
+
+# Objective
+
+Use Johns Hopkins COVID data to plot cases and deaths worldwide and in selected country.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# get country from input
+flagIso3c <- params$flagIso3c
+
 ```
 
 ```{r packages}
@@ -14,6 +29,7 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(lubridate)
   library(viridis)
+  library(plotly)
 })
 ```
 
@@ -35,9 +51,24 @@ data <- mutate(data, cases_percapita = (confirmed / population),
                deaths_percpita = (deaths / population),
                death_rate = (deaths/confirmed))
 
+# check that flagIso3c is in dataset
+if( !(flagIso3c %in% data$iso3c)) {
+  stop("Highlight country ", flagIso3c, " not found in dataset")
+}
+
+# get country code
+flagCountry <- filter(cases, iso3c == flagIso3c) %>% 
+  slice(1) %>% 
+  pull(country)
+
+# define manual color scale
+flagColors <- c("red", "grey50")
+names(flagColors) <- c(flagIso3c, "Others")
+
 ```
 
-# Total cases
+## Worldwide cases
+
 
 ```{r last_cases}
 # last reported casenumber and deaths
@@ -48,25 +79,53 @@ last <- data %>%
   slice(1) %>%
   ungroup() 
 
-# plot cases
-ggplot(last, aes(x = fct_reorder(country, confirmed, .desc = T),
-                 y = confirmed)) +
+# plot cases, remove uncoded countries
+plot_bycountry <- filter(last, !is.na(iso3c)) %>%
+  ggplot(aes(x = fct_reorder(country, confirmed, .desc = T),
+             y = confirmed, 
+             color = ifelse(iso3c == flagIso3c, flagIso3c, "Others"))) +
   labs(x = "Country", y = "Confirmed Cases",
+       color = "Country",
        title = "Confirmed Cases by Country") +
+  scale_color_manual(values = flagColors) +
   stat_identity() +
   scale_y_log10() +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+plot_bycountry
+
+# make interactive
+ggplotly(plot_bycountry, tooltip = c("x", "y"))
 
 ```
 
 ```{r cases vs population}
-last %>%
-  ggplot(aes(x = population, y = confirmed)) +
-  stat_smooth(method = "lm") +
+# plot confirmed cases vs population
+
+plot_caseVpop <- filter(last, !is.na(iso3c) & !is.na(population)) %>%
+  ggplot(aes(x = population, y = confirmed, fill = iso3c,
+             color = ifelse(iso3c == flagIso3c, flagIso3c, "Others"))) +
+  stat_smooth(method = "lm", formula = y~ x,
+              aes(color = NA, fill = NA),
+              color = "black", linetype = "dotted") +
   geom_point() +
+  labs(color = "Country",
+       title = "Cases vs. Population") +
+  scale_color_manual(values = flagColors) +
   scale_x_log10() +
   scale_y_log10() +
-  theme_minimal()
+  theme_minimal() +
+  guides(fill = FALSE)
+
+# print static
+plot_caseVpop
+
+# make interactive
+ggplotly(plot_caseVpop, 
+         tooltip = c("confirmed", "population", "iso3c"))
+
 ```
 
 ```{r deaths vs cases}
@@ -74,7 +133,7 @@ last %>%
 last %>% 
   filter(confirmed > 1 & deaths > 1) %>% 
   ggplot(aes(x = confirmed, y = deaths)) +
-  stat_smooth(method = "lm") +
+  stat_smooth(method = "lm", formula = y ~ x) +
   geom_point() +
   scale_x_log10() +
   scale_y_log10() +
@@ -84,36 +143,45 @@ last %>%
 ```
 
 
-# US cases
+# Cases in `r flagCountry`
 
-```{r usa_cases}
-usa <- filter(data, iso3c == "USA")
+```{r flag_cases}
+flagCases <- filter(data, iso3c == flagIso3c)
 
 # plot cases per time
-usa %>%
+f_caseVday <- flagCases %>%
   ggplot(aes(x = date, y = confirmed)) +
   scale_y_log10() +
-  stat_smooth(method = "lm") +
+  stat_smooth(method = "lm", formula = y ~ x) +
   geom_point() +
-  labs(title = "US Cases by Date") +
+  labs(title = paste(flagCountry, "Cases by Date")) +
   theme_minimal()
 
+ggplotly(f_caseVday)
+
 # plot deaths
-usa %>%
+f_deathsVday <- flagCases %>%
   filter(deaths > 0) %>%
   ggplot(aes(x = date, y = deaths)) +
   scale_y_log10() +
-  stat_smooth(method = "lm") +
+  stat_smooth(method = "lm", formula = y ~x) +
   geom_point() +
-  labs(title = "US Deaths by Date") +
+  labs(title = "US Deaths by Date",
+       x = "Deaths", y = "Date") +
   theme_minimal()
 
+ggplotly(f_deathsVday)
+
 # plot death rate over time
-usa %>%
+f_deathRateVday <- flagCases %>%
   filter(death_rate > 0) %>%
   ggplot(aes(x = date, y = death_rate)) +
   geom_point(aes(color = log10(confirmed))) +
   scale_color_viridis() +
+  labs(title = paste(flagCountry, "Death Rate by Date"),
+       x = "Date", y = "Deaths/Cases", color = "log10(Cases)") +
   theme_minimal()
+
+ggplotly(f_deathRateVday)
 
 ```
