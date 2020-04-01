@@ -30,6 +30,8 @@ suppressPackageStartupMessages({
   library(lubridate)
   library(viridis)
   library(plotly)
+  library(envDocument)
+  library(knitr)
 })
 ```
 
@@ -184,4 +186,17 @@ f_deathRateVday <- flagCases %>%
 
 ggplotly(f_deathRateVday)
 
+```
+
+---
+abstract: |
+  COVID-19 case data was downloaded from the Johns Hopkins Dataset.
+  Worldwide there were `r format(sum(last$confirmed), big.mark = ",")` cases and `r format(sum(last$deaths), big.mark = ",")` deaths as of `r max(last$date)`.
+  In `r flagCountry` there were `r format(max(flagCases$confirmed), big.mark=",")` cases and `r format(max(flagCases$deaths), big.mark = ",")` deaths as of `r max(flagCases$date)`.
+---
+
+# System information
+
+```{r environment_info}
+kable(env_doc())
 ```
