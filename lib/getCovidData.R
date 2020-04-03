@@ -1,6 +1,7 @@
 suppressPackageStartupMessages({ 
 	library(httr)
 	library(dplyr)
+	library(lubridate)
 	library(jsonlite)
 })
 
@@ -24,6 +25,8 @@ df$date <- as.Date(df$date)
 attr(df, "url") <- covidUrl
 
 attr(df, "downloaded") <- Sys.time()
+
+
 
 return(df)
 }
