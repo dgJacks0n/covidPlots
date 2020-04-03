@@ -40,6 +40,8 @@ suppressPackageStartupMessages({
 
 ```{r functions}
 source(paste(here::here(), "lib", "getCovidData.R", sep = "/"))
+
+theme_set(theme_minimal())
 ```
 
 # Data
@@ -61,20 +63,6 @@ flagCountry <- filter(data, code == flagIso3c) %>%
   slice(1) %>% 
   pull(country) 
 
-# define manual color scale
-flagColors <- c("red", "grey50")
-names(flagColors) <- c(flagIso3c, "Others")
-
-```
-
-Using data downloaded from `r datasource` on `r datatime`.
-This data includes cases and deaths through `r max(data$date)`.
-
-# Results
-
-## Worldwide cases
-
-```{r last_cases}
 # last reported casenumber and deaths
 
 last <- data %>%
@@ -83,66 +71,146 @@ last <- data %>%
   slice(1) %>%
   filter(cases_cum > 0) %>%
   ungroup() 
+
+# define manual color scale: red for country of interest, grey for others
+flagColors <- rep("grey50", nrow(last))
+
+names(flagColors) <- last$country
+
+flagColors[flagCountry] <- "red"
 ```
 
-```{r plot_bycountry}
+Using data downloaded from `r datasource` on `r datatime`.
+This data includes cases and deaths through `r max(data$date)`.
+
+# Results
+
+## Worldwide Cases
+
+### Cumulative Cases
+
+
+```{r plot_cases_country}
 # plot cases, remove uncoded countries
-plot_bycountry <- filter(last, !is.na(code)) %>%
+plot_bycountry <- filter(last, !is.na(country)) %>%
   ggplot(aes(x = fct_reorder(country, cases_cum, .desc = T),
              y = cases_cum, 
-             color = ifelse(code == flagIso3c, flagIso3c, "Others"))) +
+             color = country)) +
   labs(x = "Country", y = "Confirmed Cases",
        color = "Country",
        title = "Confirmed Cases by Country") +
   scale_color_manual(values = flagColors) +
   stat_identity() +
   scale_y_log10() +
-  theme_minimal() +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+  guides(color = FALSE) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank())
 
-plot_bycountry
+# plot_bycountry
 
 # make interactive
-ggplotly(plot_bycountry, tooltip = c("x", "y"))
+ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
+  hide_guides()
 
 ```
 
-```{r cases vs population}
+### Cases vs. Time
+
+```{r plot_cases_v_time}
+# plot cumulative cases vs time.  Adjust to start at day of first case
+rel_data <- data %>% 
+  filter(cases_cum > 0) %>% 
+  group_by(code) %>% 
+  mutate(d_from_first_case = as.numeric(date - min(date))) %>%
+  ungroup()
+
+cases_v_time <- ggplot(rel_data, 
+       aes(x = d_from_first_case, y = cases_cum,
+           color = country)) + 
+  geom_line() + 
+  scale_y_log10() +
+  labs(x = "Days From First Case", y = "Cases", color = "Country",
+       title = "Cases Over Time") +
+  scale_color_manual(values = flagColors) +
+  guides(color = FALSE)
+
+# cases_v_time
+
+ggplotly(cases_v_time) %>% hide_legend()
+```
+
+### Cases vs. Population
+
+
+```{r cases_vs_population}
 # plot confirmed cases vs population
 
 plot_caseVpop <- filter(last, !is.na(code) & !is.na(population)) %>%
-  ggplot(aes(x = population, y = cases_cum, fill = code,
-             color = ifelse(code == flagIso3c, flagIso3c, "Others"))) +
+  ggplot(aes(x = population, y = cases_cum, 
+             color = country)) +
   stat_smooth(method = "lm", formula = y~ x,
-              aes(color = NA, fill = NA),
-              color = "black", linetype = "dotted") +
+               aes(color = NA),
+               color = "black", linetype = "dotted") +
   geom_point() +
   labs(color = "Country",
        title = "Cases vs. Population",
-       x = "Total Cases", y = "Population") +
+       y = "Total Cases", x = "Population") +
   scale_color_manual(values = flagColors) +
   scale_x_log10() +
   scale_y_log10() +
   theme_minimal() +
-  guides(fill = FALSE)
+  guides(color = FALSE)
 
 # print static
-plot_caseVpop
+# plot_caseVpop
 
 # make interactive
-ggplotly(plot_caseVpop, 
-         tooltip = c("confirmed", "population", "iso3c"))
+ggplotly(plot_caseVpop,
+  tooltip = c("cases_cum", "population", "country")
+) %>% hide_legend()
 
 ```
+
+### Deaths vs. Population
+
+```{r deaths_vs_population}
+# plot deaths vs population
+
+plot_deathsVpop <- filter(last, !is.na(country) & !is.na(population) & deaths_cum > 0) %>%
+  ggplot(aes(x = population, y = deaths_cum,
+             color = country)) +
+  stat_smooth(method = "lm", formula = y~ x,
+              aes(color = NA), color = "black") +
+  geom_point() +
+  labs(color = "Country",
+       title = "Deaths vs. Population",
+       y = "Total Deaths", x = "Population") +
+  scale_color_manual(values = flagColors) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal() +
+  guides(color = FALSE)
+
+# print static
+# plot_deathsVpop
+
+# make interactive
+ggplotly(plot_deathsVpop) %>% hide_guides()
+
+```
+
+### Deaths vs. Cases
 
 ```{r deaths vs cases}
 
 p_deathsVcases <- last %>% 
   filter(deaths_cum > 1) %>% 
-  ggplot(aes(x = cases_cum, y = deaths_cum, fill = code,
-             color = ifelse(code == flagIso3c, flagIso3c, "Others"))) +
-  stat_smooth(method = "lm", formula = y ~ x, aes(color = NA, fill = NA)) +
+  ggplot(aes(x = cases_cum, y = deaths_cum, 
+             color = country)) +
+  stat_smooth(method = "lm", formula = y ~ x, aes(color = NA),
+              color = "black") +
   geom_point() +
   scale_x_log10() +
   scale_y_log10() +
@@ -150,16 +218,18 @@ p_deathsVcases <- last %>%
   labs(x = "Cases", y = "Deaths", color = "Country",
        title = "Cumulative Deaths vs Cases") +
   theme_minimal() +
-  guides(fill = F)
+  guides(color = F)
 
-p_deathsVcases
+# p_deathsVcases
 
-ggplotly(p_deathsVcases)
+ggplotly(p_deathsVcases) %>% hide_guides()
 
 ```
 
 
 ## Cases in `r flagCountry`
+
+### Cases per Day
 
 ```{r flag_cases}
 flagCases <- filter(data, code == flagIso3c & cases_cum > 0)
@@ -170,11 +240,16 @@ f_caseVday <- flagCases %>%
   scale_y_log10() +
   stat_smooth(method = "lm", formula = y ~ x) +
   geom_point() +
-  labs(title = paste(flagCountry, "Cases by Date")) +
-  theme_minimal()
+  labs(title = paste(flagCountry, "Cumulative Cases by Date"),
+       y = "Cases", x = "Date") 
 
 ggplotly(f_caseVday)
 
+```
+
+### Deaths per Day
+
+```{r plot_deaths_per_day}
 # plot deaths
 f_deathsVday <- flagCases %>%
   filter(deaths > 0) %>%
@@ -182,12 +257,16 @@ f_deathsVday <- flagCases %>%
   scale_y_log10() +
   stat_smooth(method = "lm", formula = y ~x) +
   geom_point() +
-  labs(title = "US Deaths by Date",
-       x = "Deaths", y = "Date") +
+  labs(title = "Cumulative Deaths by Date",
+       y = "Deaths", x = "Date") +
   theme_minimal()
 
 ggplotly(f_deathsVday)
 
+```
+### Death Rate Over Time
+
+``` {r plot_deathrate}
 # plot death rate over time
 f_deathRateVday <- flagCases %>%
   filter(deaths_cum > 1) %>%
