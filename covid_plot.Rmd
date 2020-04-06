@@ -120,13 +120,10 @@ ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
 
 ```{r plot_cases_v_time}
 # plot cumulative cases vs time.  Adjust to start at day of first case
-rel_data <- data %>% 
-  filter(cases_cum > 0) %>% 
-  group_by(code) %>% 
-  mutate(d_from_first_case = as.numeric(date - min(date))) %>%
-  ungroup()
 
-cases_v_time <- ggplot(rel_data, 
+cases_v_time <- data %>%
+  filter(!is.na(d_from_first_case)) %>%
+  ggplot(., 
        aes(x = d_from_first_case, y = cases_cum,
            color = country)) + 
   geom_line() + 
@@ -229,7 +226,7 @@ ggplotly(p_deathsVcases) %>% hide_guides()
 
 ## Cases in `r flagCountry`
 
-### Cases per Day
+### Total Cases By Day
 
 ```{r flag_cases}
 flagCases <- filter(data, code == flagIso3c & cases_cum > 0)
@@ -247,7 +244,22 @@ ggplotly(f_caseVday)
 
 ```
 
-### Deaths per Day
+### New Cases Per Day
+```{r flag_new_cases}
+
+f_newCaseVDay <- 
+  flagCases %>%
+  ggplot(aes(x = date, y = cases)) +
+  stat_smooth(method = "loess", formula = "y ~ x") +
+  geom_point() +
+  labs(title = paste(flagCountry, "New Cases by Date"),
+       y = "Cases", x = "Date") 
+
+ggplotly(f_newCaseVDay)
+
+```
+
+### Total Deaths per Day
 
 ```{r plot_deaths_per_day}
 # plot deaths
