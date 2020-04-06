@@ -63,6 +63,10 @@ flagCountry <- filter(data, code == flagIso3c) %>%
   slice(1) %>% 
   pull(country) 
 
+# format for printing
+flagCountryPretty <- gsub("_", " ", flagCountry)
+flagCountryPretty <- sub("^United", "The United", flagCountryPretty)
+
 # last reported casenumber and deaths
 
 last <- data %>%
@@ -112,7 +116,8 @@ plot_bycountry <- filter(last, !is.na(country)) %>%
 
 # make interactive
 ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
-  hide_guides()
+  hide_guides() %>%
+  highlight(dynamic = T, on = "plotly_selected")
 
 ```
 
@@ -224,7 +229,7 @@ ggplotly(p_deathsVcases) %>% hide_guides()
 ```
 
 
-## Cases in `r flagCountry`
+## Cases in `r flagCountryPretty`
 
 ### Total Cases By Day
 
@@ -237,7 +242,7 @@ f_caseVday <- flagCases %>%
   scale_y_log10() +
   stat_smooth(method = "lm", formula = y ~ x) +
   geom_point() +
-  labs(title = paste(flagCountry, "Cumulative Cases by Date"),
+  labs(title = paste("Cumulative Cases by Date In", flagCountryPretty),
        y = "Cases", x = "Date") 
 
 ggplotly(f_caseVday)
@@ -249,10 +254,11 @@ ggplotly(f_caseVday)
 
 f_newCaseVDay <- 
   flagCases %>%
-  ggplot(aes(x = date, y = cases)) +
+  ggplot(aes(x = date, y = cases + 0.1)) +
   stat_smooth(method = "loess", formula = "y ~ x") +
   geom_point() +
-  labs(title = paste(flagCountry, "New Cases by Date"),
+  scale_y_log10() +
+  labs(title = paste("New Cases by Date In", flagCountryPretty),
        y = "Cases", x = "Date") 
 
 ggplotly(f_newCaseVDay)
@@ -269,13 +275,14 @@ f_deathsVday <- flagCases %>%
   scale_y_log10() +
   stat_smooth(method = "lm", formula = y ~x) +
   geom_point() +
-  labs(title = "Cumulative Deaths by Date",
+  labs(title = paste("Cumulative Deaths by Date In", flagCountryPretty),
        y = "Deaths", x = "Date") +
   theme_minimal()
 
 ggplotly(f_deathsVday)
 
 ```
+
 ### Death Rate Over Time
 
 ``` {r plot_deathrate}
@@ -285,7 +292,7 @@ f_deathRateVday <- flagCases %>%
   ggplot(aes(x = date, y = (deaths_cum/cases_cum))) +
   geom_point(aes(color = log10(cases_cum))) +
   scale_color_viridis() +
-  labs(title = paste(flagCountry, "Death Rate by Date"),
+  labs(title = paste("Death Rate by Date In", flagCountryPretty),
        x = "Date", y = "Deaths/Cases", color = "log10(Cases)") +
   theme_minimal()
 
@@ -300,7 +307,7 @@ abstract: |
   Worldwide there were `r format(sum(last$cases_cum), big.mark = ",")` cases 
   and `r format(sum(last$deaths_cum), big.mark = ",")` deaths as of 
   `r max(last$date)`.
-  In `r flagCountry` there were `r format(max(flagCases$cases_cum), big.mark=",")` 
+  In `r flagCountryPretty` there were `r format(max(flagCases$cases_cum), big.mark=",")` 
   cases and `r format(max(flagCases$deaths_cum), big.mark = ",")` 
   deaths as of `r max(flagCases$date)`.
 ---
