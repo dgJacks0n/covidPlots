@@ -20,7 +20,8 @@ params:
 Use Johns Hopkins COVID data to plot cases and deaths worldwide and in selected country.
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE)
 
 # get country from input
 flagIso3c <- params$flagIso3c
@@ -97,6 +98,7 @@ This data includes cases and deaths through `r max(data$date)`.
 ```{r plot_cases_country}
 # plot cases, remove uncoded countries
 plot_bycountry <- filter(last, !is.na(country)) %>%
+  highlight_key(~country, group = "lastData") %>%
   ggplot(aes(x = fct_reorder(country, cases_cum, .desc = T),
              y = cases_cum, 
              color = country)) +
@@ -117,17 +119,18 @@ plot_bycountry <- filter(last, !is.na(country)) %>%
 # make interactive
 ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
   hide_guides() %>%
-  highlight(dynamic = T, on = "plotly_selected")
+  highlight(dynamic = T, selectize = T, persistent = T)
 
 ```
 
 ### Cases vs. Time
 
-```{r plot_cases_v_time}
+```{r plot_cases_v_time, message = F}
 # plot cumulative cases vs time.  Adjust to start at day of first case
 
 cases_v_time <- data %>%
   filter(!is.na(d_from_first_case)) %>%
+  highlight_key(~country, group = "lastData") %>%
   ggplot(., 
        aes(x = d_from_first_case, y = cases_cum,
            color = country)) + 
@@ -140,7 +143,9 @@ cases_v_time <- data %>%
 
 # cases_v_time
 
-ggplotly(cases_v_time) %>% hide_legend()
+ggplotly(cases_v_time) %>% 
+  hide_legend() %>%
+  highlight(dynamic = T, selectize = T, persistent = T)
 ```
 
 ### Cases vs. Population
@@ -149,7 +154,8 @@ ggplotly(cases_v_time) %>% hide_legend()
 ```{r cases_vs_population}
 # plot confirmed cases vs population
 
-plot_caseVpop <- filter(last, !is.na(code) & !is.na(population)) %>%
+plot_caseVpop <- filter(last, !is.na(population)) %>%
+  highlight_key(~country, group = "lastData") %>%
   ggplot(aes(x = population, y = cases_cum, 
              color = country)) +
   stat_smooth(method = "lm", formula = y~ x,
@@ -170,8 +176,9 @@ plot_caseVpop <- filter(last, !is.na(code) & !is.na(population)) %>%
 
 # make interactive
 ggplotly(plot_caseVpop,
-  tooltip = c("cases_cum", "population", "country")
-) %>% hide_legend()
+  tooltip = c("cases_cum", "population", "country")) %>% 
+  hide_legend() %>%
+  highlight(dynamic = T, selectize = T, persistent = T)
 
 ```
 
@@ -180,7 +187,10 @@ ggplotly(plot_caseVpop,
 ```{r deaths_vs_population}
 # plot deaths vs population
 
-plot_deathsVpop <- filter(last, !is.na(country) & !is.na(population) & deaths_cum > 0) %>%
+plot_deathsVpop <- filter(last, !is.na(country) & 
+                            !is.na(population) & 
+                            deaths_cum > 0) %>%
+  highlight_key(~country, group = "lastData") %>%
   ggplot(aes(x = population, y = deaths_cum,
              color = country)) +
   stat_smooth(method = "lm", formula = y~ x,
@@ -199,7 +209,10 @@ plot_deathsVpop <- filter(last, !is.na(country) & !is.na(population) & deaths_cu
 # plot_deathsVpop
 
 # make interactive
-ggplotly(plot_deathsVpop) %>% hide_guides()
+ggplotly(plot_deathsVpop) %>% 
+  hide_guides() %>%
+  highlight(dynamic = T, selectize = T, persistent = T)
+
 
 ```
 
@@ -209,6 +222,7 @@ ggplotly(plot_deathsVpop) %>% hide_guides()
 
 p_deathsVcases <- last %>% 
   filter(deaths_cum > 1) %>% 
+  highlight_key(~country, group = "lastData") %>%
   ggplot(aes(x = cases_cum, y = deaths_cum, 
              color = country)) +
   stat_smooth(method = "lm", formula = y ~ x, aes(color = NA),
@@ -224,7 +238,9 @@ p_deathsVcases <- last %>%
 
 # p_deathsVcases
 
-ggplotly(p_deathsVcases) %>% hide_guides()
+ggplotly(p_deathsVcases) %>% 
+  hide_guides() %>%
+  highlight(dynamic = T, selectize = T, persistent = T)
 
 ```
 
