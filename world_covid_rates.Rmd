@@ -119,7 +119,8 @@ plot_bycountry <- filter(last, !is.na(country)) %>%
 # make interactive
 ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
   hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T)
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
 
 ```
 
@@ -145,7 +146,8 @@ cases_v_time <- data %>%
 
 ggplotly(cases_v_time) %>% 
   hide_legend() %>%
-  highlight(dynamic = T, selectize = T, persistent = T)
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
 ```
 
 ### Cases vs. Population
@@ -178,7 +180,8 @@ plot_caseVpop <- filter(last, !is.na(population)) %>%
 ggplotly(plot_caseVpop,
   tooltip = c("cases_cum", "population", "country")) %>% 
   hide_legend() %>%
-  highlight(dynamic = T, selectize = T, persistent = T)
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
 
 ```
 
@@ -211,7 +214,8 @@ plot_deathsVpop <- filter(last, !is.na(country) &
 # make interactive
 ggplotly(plot_deathsVpop) %>% 
   hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T)
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
 
 
 ```
@@ -240,7 +244,8 @@ p_deathsVcases <- last %>%
 
 ggplotly(p_deathsVcases) %>% 
   hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T)
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
 
 ```
 
