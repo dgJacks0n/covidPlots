@@ -1,0 +1,99 @@
+---
+title: "US Covid Rates"
+author: "Donald Jackson"
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+
+# set default ggplot theme
+ggplot2::theme_set(ggplot2::theme_minimal())
+```
+
+# Objective
+
+Generate exploratory visualizations for US COVID-19 infection and death rates using data from the New York Times.
+
+```{r packages}
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(lubridate)
+  library(viridis)
+  library(plotly)
+  library(envDocument)
+  library(knitr)
+	library(git2r)
+	library(here)
+})
+
+```
+
+## Data
+
+Data is compiled by the New York Times and posted to Github at https://github.com/nytimes/covid-19-data.  Data is updated daily.
+
+```{r check_data_status}
+dataDir <- paste(here::here(), "data", "uslocal", sep = "/")
+
+# refresh data if older than 'staleness' hours
+staleness <- 12 
+
+# need to add code to check if data is current.
+# right now I'm pulling it in as a submodule.
+lastDataCommit <- git2r::last_commit(dataDir)
+
+commitTime <- as.POSIXct(lastDataCommit$author$when)
+
+age <- as.numeric((Sys.time() - commitTime), units = "hours")
+
+if(age >= staleness) {
+	# need to figure out how to pull with user agent
+}
+
+```
+
+Using data from
+`r format.Date(commitTime, format = "%B %d %Y %T", tz = "", usetz = T)`
+
+```{r load_state_data}
+# load state-level data
+stateFile <- paste(dataDir, "us-states.csv", sep = "/")
+
+stateData <- read.csv(stateFile, header = T, stringsAsFactors = F)
+
+# Values for cases and deaths are cumulative, need to get new
+# so example
+# data %>%
+    # group_by(id) %>%
+    # arrange(date, .by_group = TRUE) %>%
+    # mutate(diff = value - lag(value, default = first(value)))
+
+stateData <- stateData %>%
+	group_by(state) %>%
+	arrange(date, .by_group = T) %>%
+	mutate(new_cases = cases - lag(cases, default = first(cases)),
+				 new_deaths = deaths - lag(deaths, default = first(deaths)))
+
+```
+
+
+# Results
+
+## State-Level
+
+```{r cases_byStateDate}
+# plot cumulative cases by state
+p_casesByState <- stateData %>%
+	ggplot(aes(x = date, y = cases)) +
+	geom_line(aes(group = state)) +
+	scale_y_log10()
+
+```
