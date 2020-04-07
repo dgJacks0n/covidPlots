@@ -1,0 +1,3 @@
+[submodule "data/uslocal"]
+	path = data/uslocal
+	url = git@github.com:nytimes/covid-19-data.git
