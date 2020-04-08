@@ -40,6 +40,16 @@ suppressPackageStartupMessages({
 
 Data is compiled by the New York Times and posted to Github at https://github.com/nytimes/covid-19-data.  Data is updated daily.
 
+
+```{r load_fips}
+# map state fips files to 2-letter abbreviations
+fipsFile <- paste(here::here(), "data", "us_fips2state.txt", sep = "/")
+
+fips2State <- read.delim(fipsFile, sep = "\t", header = T, 
+												 stringsAsFactors = F)
+```
+
+
 ```{r check_data_status}
 dataDir <- paste(here::here(), "data", "uslocal", sep = "/")
 
@@ -69,18 +79,29 @@ stateFile <- paste(dataDir, "us-states.csv", sep = "/")
 
 stateData <- read.csv(stateFile, header = T, stringsAsFactors = F)
 
-# Values for cases and deaths are cumulative, need to get new
-# so example
-# data %>%
-    # group_by(id) %>%
-    # arrange(date, .by_group = TRUE) %>%
-    # mutate(diff = value - lag(value, default = first(value)))
+# convert date
+stateData$date <- as.Date(stateData$date, format = "%Y-%m-%d")
 
+# add state codes
+stateData <- left_join(stateData,
+											 fips2State %>% select(fips = FIPS, Postal_Code),
+											 by = 'fips')
+
+# get most recent data
+lastStateData <- stateData %>%
+	group_by(state) %>%
+	arrange(desc(date), .by_group = T) %>%
+	slice(1) %>%
+	ungroup()
+
+# Values for cases and deaths are cumulative, need to get new
 stateData <- stateData %>%
 	group_by(state) %>%
 	arrange(date, .by_group = T) %>%
 	mutate(new_cases = cases - lag(cases, default = first(cases)),
-				 new_deaths = deaths - lag(deaths, default = first(deaths)))
+				 new_deaths = deaths - lag(deaths, default = first(deaths))) %>%
+	ungroup()
+
 
 ```
 
@@ -89,11 +110,131 @@ stateData <- stateData %>%
 
 ## State-Level
 
+### Cumulative Cases
 ```{r cases_byStateDate}
 # plot cumulative cases by state
-p_casesByState <- stateData %>%
-	ggplot(aes(x = date, y = cases)) +
+p_casesByState <- lastStateData %>%
+	mutate(state = fct_reorder(state, cases, .desc = T),
+				 cases = ifelse(cases < 1, (cases + 0.1), cases) )%>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = state, 
+						 y = cases)) +
+	geom_point() +
+	scale_y_log10() +
+	scale_x_discrete(expand = expansion(add = 1)) +
+	labs(title = "Total Cases By State",
+			 x = "Cases", y = "State") +
+	theme(axis.text.x = element_blank(),
+				axis.ticks.x = element_blank(),
+				panel.grid.minor.x = element_blank(),
+				panel.grid.major.x = element_blank())
+
+
+ggplotly(p_casesByState, tooltip = c("state", "cases")) %>%
+	  hide_guides() %>%
+  highlight(dynamic = T, selectize = T, persistent = T,
+            on = "plotly_selected")
+
+```
+
+### Case Growth
+```{r caseGrowth_byState}
+# plot growth in cases by statep
+p_caseGrowthByState <- stateData %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = date, y = (cases + 0.1))) +
 	geom_line(aes(group = state)) +
 	scale_y_log10()
 
+ggplotly(p_caseGrowthByState) %>%
+	hide_guides() %>%
+	highlight(dynamic = T, selectize = T, persistent = T,
+						on = "plotly_selected")
+
+```
+
+### Cumulative Deaths 
+```{r cumDeaths_byState}
+# plot cumulative cases by state
+p_deathsByState <- lastStateData %>%
+	mutate(state = fct_reorder(state, deaths, .desc = T),
+				 deaths = ifelse(deaths < 1, (deaths + 0.1), deaths))%>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = state, 
+						 y = deaths)) +
+	geom_point() +
+	scale_y_log10() +
+	scale_x_discrete(expand = expansion(add = 1)) +
+	labs(title = "Total Deaths By State",
+			 x = "Deaths", y = "State") +
+	theme(axis.text.x = element_blank(),
+				axis.ticks.x = element_blank(),
+				panel.grid.minor.x = element_blank(),
+				panel.grid.major.x = element_blank())
+
+
+ggplotly(p_deathsByState, tooltip = c("state", "deaths")) %>%
+	hide_guides() %>%
+	highlight(dynamic = T, selectize = T, persistent = T,
+						on = "plotly_selected")
+```
+
+### Fatality Rate By State
+```{r state_deathsPerCase}
+p_cfrByState <- lastStateData %>%
+	filter(deaths > 0) %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = cases, y = deaths)) +
+	stat_smooth(method = "lm", formula = y ~ x) +
+	geom_point() +
+	scale_x_log10() +
+	scale_y_log10()
+
+ggplotly(p_cfrByState, tooltip = c("all")) %>%
+	hide_guides() %>%
+	highlight(dynamic = T, selectize = T, persistent = T,
+						on = "plotly_selected")
+```
+
+```{r state_cfrByDate}
+p_cfrByStateDate <- stateData %>%
+	filter(deaths > 0) %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = date, y = (deaths/cases), 
+						 group = state)) +
+	labs(title = "State Death Rates By Date", x = "Date",
+			 y = "Death Rate", color = "log10 Cases") +
+	geom_line()
+
+ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
+	hide_guides() %>%
+	highlight(dynamic = T, selectize = T, persistent = T,
+						on = "plotly_selected")
+```
+
+### Map Plot
+
+```{r map_byState}
+# give state boundaries a white border
+l <- list(color = toRGB("white"), width = 2)
+# specify some map projection/options
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+fig <- plot_geo(lastStateData, locationmode = "USA-states")
+fig <- fig %>% add_trace(
+    z = ~cases, text = ~cases, locations = ~fips,
+    color = ~cases, colors = 'Purples'
+  )
+fig <- fig %>% colorbar(title = "Cases")
+fig <- fig %>% layout(
+    title = 'US Case Map',
+    geo = g
+  )
+
+fig
 ```
