@@ -40,7 +40,7 @@ suppressPackageStartupMessages({
 ```
 
 ```{r functions}
-source(paste(here::here(), "lib", "getCovidData.R", sep = "/"))
+source(paste(here::here(), "lib", "getWorldData.R", sep = "/"))
 
 theme_set(theme_minimal())
 ```
