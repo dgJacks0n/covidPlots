@@ -8,13 +8,18 @@ output:
     toc: true
     toc_float: true
     toc_depth: 3
+params:
+  highlightState:
+    input: text
+    label: State to highlight
+    value: none
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 
-# set default ggplot theme
-ggplot2::theme_set(ggplot2::theme_minimal())
+# get state to highlight
+highlightState <-  params$highlightState
 ```
 
 # Objective
@@ -32,7 +37,14 @@ suppressPackageStartupMessages({
   library(knitr)
 	library(git2r)
 	library(here)
+	library(ggToys)
 })
+
+```
+
+```{r set_defaults}
+# set default ggplot theme
+ggplot2::theme_set(theme_minimal())
 
 ```
 
@@ -110,53 +122,65 @@ stateData <- stateData %>%
 
 ## State-Level
 
-### Cumulative Cases
+### Cases
 ```{r cases_byStateDate}
 # plot cumulative cases by state
-p_casesByState <- lastStateData %>%
-	mutate(state = fct_reorder(state, cases, .desc = T),
+casesByState <- lastStateData %>%
+	mutate(state = fct_reorder(state, cases, .desc = F),
 				 cases = ifelse(cases < 1, (cases + 0.1), cases) )%>%
 	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = state, 
-						 y = cases)) +
+	ggplot(aes(x= state, y = cases)) +
 	geom_point() +
 	scale_y_log10() +
 	scale_x_discrete(expand = expansion(add = 1)) +
 	labs(title = "Total Cases By State",
-			 x = "Cases", y = "State") +
+			 y = "Cases", x = "State") +
 	theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank(),
 				panel.grid.minor.x = element_blank(),
 				panel.grid.major.x = element_blank())
 
 
-ggplotly(p_casesByState, tooltip = c("state", "cases")) %>%
-	  hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+p_casesByState <- ggplotly(casesByState, tooltip = c("state", "cases")) %>%
+	hide_guides() #%>%
+# 		highlight(dynamic = T, selectize = T, persistent = F,
+# 						on = "plotly_click",
+#   					defaultValues = highlightState)
 
-```
+# p_casesByState
 
-### Case Growth
-```{r caseGrowth_byState}
-# plot growth in cases by statep
-p_caseGrowthByState <- stateData %>%
+# plot growth in cases by state
+caseGrowthByState <- stateData %>%
+	mutate(cases = ifelse(cases <1, (cases + 0.1), cases)) %>%
 	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = (cases + 0.1))) +
+	ggplot(aes(x = date, y = cases)) +
 	geom_line(aes(group = state)) +
+	labs(title = "Case Growth By State", 
+			 x = "Date", y = "Cases") +
 	scale_y_log10()
 
-ggplotly(p_caseGrowthByState) %>%
-	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = T,
-						on = "plotly_selected")
+p_caseGrowthByState <- ggplotly(caseGrowthByState) %>%
+	hide_guides() #%>%
+# 	highlight(dynamic = T, selectize = T, persistent = F,
+# 						on = "plotly_click",
+#   					defaultValues = highlightState)
+
+# p_caseGrowthByState
+
+subplot(p_casesByState, p_caseGrowthByState,
+				widths = c(0.25, 0.75),
+				shareX = F, shareY = T,
+				which_layout = 1) %>%
+			highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+  					defaultValues = highlightState)
 
 ```
 
-### Cumulative Deaths 
-```{r cumDeaths_byState}
+### Deaths 
+```{r deaths_byState}
 # plot cumulative cases by state
-p_deathsByState <- lastStateData %>%
+deathsByState <- lastStateData %>%
 	mutate(state = fct_reorder(state, deaths, .desc = T),
 				 deaths = ifelse(deaths < 1, (deaths + 0.1), deaths))%>%
 	highlight_key(~state, group = "byState") %>%
@@ -166,17 +190,39 @@ p_deathsByState <- lastStateData %>%
 	scale_y_log10() +
 	scale_x_discrete(expand = expansion(add = 1)) +
 	labs(title = "Total Deaths By State",
-			 x = "Deaths", y = "State") +
+			 y = "Deaths", x = "State") +
 	theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank(),
 				panel.grid.minor.x = element_blank(),
 				panel.grid.major.x = element_blank())
 
 
-ggplotly(p_deathsByState, tooltip = c("state", "deaths")) %>%
-	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = T,
-						on = "plotly_selected")
+p_deathsByState <- ggplotly(deathsByState, tooltip = c("state", "deaths")) %>%
+	hide_guides() #%>%
+	# highlight(dynamic = T, selectize = T, persistent = F,
+						# on = "plotly_click",
+  					# defaultValues = highlightState)
+
+deathsGrowthByState <- stateData %>%
+	mutate(deaths = ifelse(deaths <1, (deaths + 0.1), deaths)) %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = date, y = deaths)) +
+	geom_line(aes(group = state)) +
+	labs(title = "Death Growth By State", 
+			 x = "Date", y = "Deaths") +
+	scale_y_log10()
+
+p_deathsGrowthByState <- ggplotly(deathsGrowthByState) %>%
+	hide_guides()
+
+subplot(p_deathsByState, p_deathsGrowthByState,
+				widths = c(0.25, 0.75),
+				shareX = F, shareY = T,
+				which_layout = 1) %>%
+			highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+  					defaultValues = highlightState)
+
 ```
 
 ### Fatality Rate By State
@@ -187,13 +233,16 @@ p_cfrByState <- lastStateData %>%
 	ggplot(aes(x = cases, y = deaths)) +
 	stat_smooth(method = "lm", formula = y ~ x) +
 	geom_point() +
+	labs(title = "Cumulative Deaths vs. Cases",
+			 x = "Cases", y = "Deaths") +
 	scale_x_log10() +
 	scale_y_log10()
 
 ggplotly(p_cfrByState, tooltip = c("all")) %>%
 	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = T,
-						on = "plotly_selected")
+	highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+  					defaultValues = highlightState)
 ```
 
 ```{r state_cfrByDate}
@@ -208,8 +257,9 @@ p_cfrByStateDate <- stateData %>%
 
 ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
 	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = T,
-						on = "plotly_selected")
+	highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+  					defaultValues = highlightState)
 ```
 
 ### Map Plot
