@@ -214,7 +214,7 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
 
 ### Map Plot
 
-```{r map_byState}
+```{r map_byState, eval = F}
 # give state boundaries a white border
 l <- list(color = toRGB("white"), width = 2)
 # specify some map projection/options
