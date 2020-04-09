@@ -92,62 +92,61 @@ This data includes cases and deaths through `r max(data$date)`.
 
 ## Worldwide Cases
 
-### Cumulative Cases
-
 
 ```{r plot_cases_country}
 # plot cases, remove uncoded countries
-plot_bycountry <- filter(last, !is.na(country)) %>%
+cases_byCountry <- filter(last, !is.na(country)) %>%
+  mutate(country = fct_reorder(country, cases_cum, .desc = F)) %>%
   highlight_key(~country, group = "lastData") %>%
-  ggplot(aes(x = fct_reorder(country, cases_cum, .desc = T),
-             y = cases_cum, 
-             color = country)) +
+  ggplot(aes(x = country, y = cases_cum)) +
   labs(x = "Country", y = "Confirmed Cases",
        color = "Country",
        title = "Confirmed Cases by Country") +
-  scale_color_manual(values = flagColors) +
+  #scale_color_manual(values = flagColors) +
   stat_identity() +
   scale_y_log10() +
-  guides(color = FALSE) +
+  scale_x_discrete(expand = expansion(add = 1)) +
+  # guides(color = FALSE) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.x = element_blank())
 
-# plot_bycountry
+# cases_byCountry
 
 # make interactive
-ggplotly(plot_bycountry, tooltip = c("country", "y")) %>%
-  hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+p_cases_byCountry <- ggplotly(cases_byCountry, tooltip = c("country", "y")) %>%
+  hide_guides() 
 
-```
-
-### Cases vs. Time
-
-```{r plot_cases_v_time, message = F}
 # plot cumulative cases vs time.  Adjust to start at day of first case
 
 cases_v_time <- data %>%
   filter(!is.na(d_from_first_case)) %>%
   highlight_key(~country, group = "lastData") %>%
-  ggplot(., 
-       aes(x = d_from_first_case, y = cases_cum,
-           color = country)) + 
-  geom_line() + 
+  ggplot(aes(x = d_from_first_case, y = cases_cum)) + 
+  geom_line(aes(group = country)) + 
   scale_y_log10() +
   labs(x = "Days From First Case", y = "Cases", color = "Country",
        title = "Cases Over Time") +
-  scale_color_manual(values = flagColors) +
+  # scale_color_manual(values = flagColors) +
   guides(color = FALSE)
 
 # cases_v_time
 
-ggplotly(cases_v_time) %>% 
-  hide_legend() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+p_cases_v_time <- ggplotly(cases_v_time) %>% 
+  hide_legend() 
+
+subplot(p_cases_byCountry,p_cases_v_time,
+				widths = c(0.25, 0.75),
+				shareX = F, shareY = T,
+				which_layout = 1) %>%
+			highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+  					defaultValues = flagCountry)
+
+
+# use plotly subplot to combine both plots
+
 ```
 
 ### Cases vs. Population
@@ -156,32 +155,29 @@ ggplotly(cases_v_time) %>%
 ```{r cases_vs_population}
 # plot confirmed cases vs population
 
-plot_caseVpop <- filter(last, !is.na(population)) %>%
+casesVpop <- filter(last, !is.na(population)) %>%
   highlight_key(~country, group = "lastData") %>%
-  ggplot(aes(x = population, y = cases_cum, 
-             color = country)) +
-  stat_smooth(method = "lm", formula = y~ x,
-               aes(color = NA),
-               color = "black", linetype = "dotted") +
+  ggplot(aes(x = population, y = cases_cum)) +
+  stat_smooth(method = "lm", formula = y~ x) +
   geom_point() +
   labs(color = "Country",
        title = "Cases vs. Population",
        y = "Total Cases", x = "Population") +
-  scale_color_manual(values = flagColors) +
   scale_x_log10() +
-  scale_y_log10() +
-  theme_minimal() +
-  guides(color = FALSE)
+  scale_y_log10() 
 
 # print static
-# plot_caseVpop
+# casesVpop
 
 # make interactive
-ggplotly(plot_caseVpop,
+p_casesVpop <- ggplotly(casesVpop,
   tooltip = c("cases_cum", "population", "country")) %>% 
   hide_legend() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+  highlight(dynamic = T, selectize = T, persistent = F,
+            on = "plotly_click",
+            defaultValues = flagCountry)
+
+p_casesVpop
 
 ```
 
@@ -190,33 +186,32 @@ ggplotly(plot_caseVpop,
 ```{r deaths_vs_population}
 # plot deaths vs population
 
-plot_deathsVpop <- filter(last, !is.na(country) & 
+deathsVpop <- filter(last, !is.na(country) & 
                             !is.na(population) & 
                             deaths_cum > 0) %>%
   highlight_key(~country, group = "lastData") %>%
-  ggplot(aes(x = population, y = deaths_cum,
-             color = country)) +
-  stat_smooth(method = "lm", formula = y~ x,
-              aes(color = NA), color = "black") +
+  ggplot(aes(x = population, y = deaths_cum)) +
+  stat_smooth(method = "lm", formula = y~ x) +
   geom_point() +
   labs(color = "Country",
        title = "Deaths vs. Population",
        y = "Total Deaths", x = "Population") +
-  scale_color_manual(values = flagColors) +
+  # scale_color_manual(values = flagColors) +
   scale_x_log10() +
-  scale_y_log10() +
-  theme_minimal() +
-  guides(color = FALSE)
+  scale_y_log10() 
+
 
 # print static
-# plot_deathsVpop
+# deathsVpop
 
 # make interactive
-ggplotly(plot_deathsVpop) %>% 
+p_deathsVpop <- ggplotly(deathsVpop) %>% 
   hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+  highlight(dynamic = T, selectize = T, persistent = F,
+            on = "plotly_click",
+            defaultValues = flagCountry)
 
+p_deathsVpop
 
 ```
 
@@ -224,29 +219,29 @@ ggplotly(plot_deathsVpop) %>%
 
 ```{r deaths vs cases}
 
-p_deathsVcases <- last %>% 
+deathsVcases <- last %>% 
   filter(deaths_cum > 1) %>% 
   highlight_key(~country, group = "lastData") %>%
-  ggplot(aes(x = cases_cum, y = deaths_cum, 
-             color = country)) +
-  stat_smooth(method = "lm", formula = y ~ x, aes(color = NA),
-              color = "black") +
+  ggplot(aes(x = cases_cum, y = deaths_cum)) +
+  stat_smooth(method = "lm", formula = y ~ x) +
   geom_point() +
   scale_x_log10() +
   scale_y_log10() +
-  scale_color_manual(values = flagColors) +
-  labs(x = "Cases", y = "Deaths", color = "Country",
+  #scale_color_manual(values = flagColors) +
+  labs(x = "Cases", y = "Deaths",
        title = "Cumulative Deaths vs Cases") +
   theme_minimal() +
   guides(color = F)
 
 # p_deathsVcases
 
-ggplotly(p_deathsVcases) %>% 
+p_deathsVcases <- ggplotly(deathsVcases) %>% 
   hide_guides() %>%
-  highlight(dynamic = T, selectize = T, persistent = T,
-            on = "plotly_selected")
+  highlight(dynamic = T, selectize = T, persistent = F,
+            on = "plotly_click",
+            defaultValues = flagCountry)
 
+p_deathsVcases
 ```
 
 
