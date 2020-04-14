@@ -12,7 +12,7 @@ params:
   highlightState:
     input: text
     label: State to highlight
-    value: none
+    value: Massachusetts
 ---
 
 ```{r setup, include=FALSE}
@@ -38,13 +38,14 @@ suppressPackageStartupMessages({
 	library(git2r)
 	library(here)
 	library(ggToys)
+	library(rjson)
 })
 
 ```
 
 ```{r set_defaults}
 # set default ggplot theme
-ggplot2::theme_set(theme_minimal())
+ggplot2::theme_set(theme_dj())
 
 ```
 
@@ -52,21 +53,11 @@ ggplot2::theme_set(theme_minimal())
 
 Data is compiled by the New York Times and posted to Github at https://github.com/nytimes/covid-19-data.  Data is updated daily.
 
-
-```{r load_fips}
-# map state fips files to 2-letter abbreviations
-fipsFile <- paste(here::here(), "data", "us_fips2state.txt", sep = "/")
-
-fips2State <- read.delim(fipsFile, sep = "\t", header = T, 
-												 stringsAsFactors = F)
-```
-
-
 ```{r check_data_status}
-dataDir <- paste(here::here(), "data", "uslocal", sep = "/")
+dataDir <- paste(here::here(), "data", "nyt_us", sep = "/")
 
 # refresh data if older than 'staleness' hours
-staleness <- 12 
+staleness <- 24 
 
 # need to add code to check if data is current.
 # right now I'm pulling it in as a submodule.
@@ -76,8 +67,14 @@ commitTime <- as.POSIXct(lastDataCommit$author$when)
 
 age <- as.numeric((Sys.time() - commitTime), units = "hours")
 
+# if data is old, update data and time
 if(age >= staleness) {
-	# need to figure out how to pull with user agent
+	git2r::pull(dataDir)
+	
+	lastDataCommit <- git2r::last_commit(dataDir)
+
+	commitTime <- as.POSIXct(lastDataCommit$author$when)
+
 }
 
 ```
@@ -87,17 +84,12 @@ Using data from
 
 ```{r load_state_data}
 # load state-level data
-stateFile <- paste(dataDir, "us-states.csv", sep = "/")
+stateFile <- paste(dataDir, "us-states.csv", sep  =  "/")
 
 stateData <- read.csv(stateFile, header = T, stringsAsFactors = F)
 
 # convert date
 stateData$date <- as.Date(stateData$date, format = "%Y-%m-%d")
-
-# add state codes
-stateData <- left_join(stateData,
-											 fips2State %>% select(fips = FIPS, Postal_Code),
-											 by = 'fips')
 
 # get most recent data
 lastStateData <- stateData %>%
@@ -113,6 +105,31 @@ stateData <- stateData %>%
 	mutate(new_cases = cases - lag(cases, default = first(cases)),
 				 new_deaths = deaths - lag(deaths, default = first(deaths))) %>%
 	ungroup()
+
+
+```
+
+```{r load_county_data}
+# load cases by county
+countyDataFile <- paste(dataDir, "us-counties.csv", sep = "/")
+
+countyData <- read.csv(countyDataFile, header = T, stringsAsFactors = F,
+											 colClasses = c("fips"="character"))
+
+countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
+
+lastCountyData <- countyData %>% 
+	group_by(fips) %>%
+	arrange(desc(date)) %>%
+	slice(1) %>%
+	ungroup()
+```
+
+```{r load_maps}
+# load county map
+countyMapUrl = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
+
+countyMapData<- rjson::fromJSON(file=countyMapUrl)
 
 
 ```
@@ -174,6 +191,35 @@ subplot(p_casesByState, p_caseGrowthByState,
 			highlight(dynamic = T, selectize = T, persistent = F,
 						on = "plotly_click",
   					defaultValues = highlightState)
+
+```
+
+```{r new_cases_by_state}
+# plot 3 day rolling average
+newCasesState <- stateData %>%
+	group_by(state) %>%
+	arrange(date, .by_group = T) %>%
+	mutate(prev_cases = lag(new_cases, 1), 
+				 prev_by2_cases = lag(new_cases, 2)) %>%
+	ungroup() %>%
+	mutate(rmean_new_cases = 0.1 + select(., new_cases, prev_cases, prev_by2_cases) %>%
+				 	rowMeans(., na.rm = T)) %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = date, y = rmean_new_cases)) +
+	geom_line(aes(group = state)) +
+	labs(y = "New Cases (3 day average)", x = "Date",
+			 title = "New Cases By State") +
+	scale_y_log10()
+
+# newCasesState
+
+p_newCasesState <- ggplotly(newCasesState) %>%
+	hide_guides() %>%
+	highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+p_newCasesState
 
 ```
 
@@ -264,27 +310,30 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
 
 ### Map Plot
 
-```{r map_byState, eval = F}
-# give state boundaries a white border
-l <- list(color = toRGB("white"), width = 2)
-# specify some map projection/options
-g <- list(
-  scope = 'usa',
-  projection = list(type = 'albers usa'),
-  showlakes = TRUE,
-  lakecolor = toRGB('white')
+```{r caseMap, eval = T}
+
+p_caseMap <- plot_ly() 
+
+p_caseMap <- p_caseMap %>% add_trace(
+    type= "choroplethmapbox",
+    geojson = countyMapData,
+    locations = lastCountyData$fips,
+    z = log10(lastCountyData$cases + 1),
+    colorscale = "Viridis",
+    zmin = 0,
+    zmax = 5,
+    marker = list(line = list(
+      width = 0),
+      opacity = 0.5
+    )
+  )
+
+p_caseMap <- p_caseMap %>% layout(
+    mapbox = list(
+      style = "carto-positron",
+      zoom  = 2,
+      center = list(lon =  -95.71, lat = 37.09))
 )
 
-fig <- plot_geo(lastStateData, locationmode = "USA-states")
-fig <- fig %>% add_trace(
-    z = ~cases, text = ~cases, locations = ~fips,
-    color = ~cases, colors = 'Purples'
-  )
-fig <- fig %>% colorbar(title = "Cases")
-fig <- fig %>% layout(
-    title = 'US Case Map',
-    geo = g
-  )
-
-fig
+p_caseMap
 ```
