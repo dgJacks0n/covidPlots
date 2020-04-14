@@ -38,7 +38,7 @@ suppressPackageStartupMessages({
 	library(git2r)
 	library(here)
 	library(ggToys)
-	library(rjson)
+
 })
 
 ```
@@ -126,14 +126,16 @@ lastCountyData <- countyData %>%
 ```
 
 ```{r load_maps}
-# load county map
-countyMapUrl = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
+# pull in previously downloaded US map data from file
+usMapFile <- paste(here::here(), "data", "usCountyMap.Rds", sep = "/")
 
-countyMapData<- rjson::fromJSON(file=countyMapUrl)
-
+countyMapData <- readRDS(usMapFile)
 
 ```
 
+Loaded US County map data from *`r normalizePath(usMapFile)`*.
+Data was downloaded from `r attr(countyMapData, "source")`
+at `r attr(countyMapData, "downloaded")`.
 
 # Results
 
@@ -308,7 +310,7 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
   					defaultValues = highlightState)
 ```
 
-### Map Plot
+### US Case Map
 
 ```{r caseMap, eval = T}
 
