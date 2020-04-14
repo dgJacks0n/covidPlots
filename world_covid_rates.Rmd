@@ -34,6 +34,7 @@ suppressPackageStartupMessages({
   library(lubridate)
   library(viridis)
   library(plotly)
+	library(ggToys)
   library(envDocument)
   library(knitr)
 })
@@ -42,7 +43,7 @@ suppressPackageStartupMessages({
 ```{r functions}
 source(paste(here::here(), "lib", "getWorldData.R", sep = "/"))
 
-theme_set(theme_minimal())
+theme_set(theme_dj())
 ```
 
 # Data
