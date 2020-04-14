@@ -36,7 +36,7 @@ countyMapData<- rjson::fromJSON(file=countyMapUrl)
 # tag with info on date and time of download 
 attr(countyMapData, "source") <- countyMapUrl
 
-attr(countyMapData, "downloaded") <- Sys.time
+attr(countyMapData, "downloaded") <- Sys.time()
 
 # write output file
 saveRDS(countyMapData, file = outFile)
