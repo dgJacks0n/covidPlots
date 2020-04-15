@@ -26,6 +26,17 @@ highlightState <-  params$highlightState
 
 Generate exploratory visualizations for US COVID-19 infection and death rates using data from the New York Times.
 
+# Procedure
+
+1. Load current state-level case and death data
+1. Load current county-level case and death data
+1. Load state and county-level population data from 2019 census and join to case and death datasets
+1. Load map coordinates for chloropleth maps
+1. Plot cases per capita at state level
+1. Map cases per capita at county level
+1. Plot deaths per capita at state level
+1. Plot deats versus cases at state level
+
 ```{r packages}
 
 suppressPackageStartupMessages({
@@ -47,6 +58,7 @@ suppressPackageStartupMessages({
 # set default ggplot theme
 ggplot2::theme_set(theme_dj())
 
+dataDir <- paste(here::here(), "data", sep = "/")
 ```
 
 ## Data
@@ -54,14 +66,14 @@ ggplot2::theme_set(theme_dj())
 Data is compiled by the New York Times and posted to Github at https://github.com/nytimes/covid-19-data.  Data is updated daily.
 
 ```{r check_data_status}
-dataDir <- paste(here::here(), "data", "nyt_us", sep = "/")
+nytDir <- paste(dataDir, "nyt_us", sep = "/")
 
 # refresh data if older than 'staleness' hours
 staleness <- 24 
 
 # need to add code to check if data is current.
 # right now I'm pulling it in as a submodule.
-lastDataCommit <- git2r::last_commit(dataDir)
+lastDataCommit <- git2r::last_commit(nytDir)
 
 commitTime <- as.POSIXct(lastDataCommit$author$when)
 
@@ -69,9 +81,9 @@ age <- as.numeric((Sys.time() - commitTime), units = "hours")
 
 # if data is old, update data and time
 if(age >= staleness) {
-	git2r::pull(dataDir)
+	git2r::pull(nytDir)
 	
-	lastDataCommit <- git2r::last_commit(dataDir)
+	lastDataCommit <- git2r::last_commit(nytDir)
 
 	commitTime <- as.POSIXct(lastDataCommit$author$when)
 
@@ -79,18 +91,83 @@ if(age >= staleness) {
 
 ```
 
-Using data from
+Using case and death data from
 `r format.Date(commitTime, format = "%B %d %Y %T", tz = "", usetz = T)`
 
-```{r load_state_data}
+```{r load_stateData}
 # load state-level data
-stateFile <- paste(dataDir, "us-states.csv", sep  =  "/")
+stateFile <- paste(nytDir, "us-states.csv", sep  =  "/")
 
 stateData <- read.csv(stateFile, header = T, stringsAsFactors = F)
 
 # convert date
 stateData$date <- as.Date(stateData$date, format = "%Y-%m-%d")
+```
 
+
+
+```{r load_county_data}
+# load cases by county
+countyDataFile <- paste(nytDir, "us-counties.csv", sep = "/")
+
+countyData <- read.csv(countyDataFile, header = T, stringsAsFactors = F,
+											 colClasses = c("fips"="character"))
+
+countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
+```
+
+```{r load_population}
+# load state and county-level population data
+
+popDir <- paste(dataDir, "usPopulation2019", sep = "/")
+
+# state populations
+statePopFile <- paste(popDir, "statePopulations.Rds", sep = "/")
+
+statePopulations <- readRDS(statePopFile)
+
+# add to state data
+stateData <- left_join(stateData, 
+											 statePopulations %>% select(STATE, population = POPULATION),
+											 by = c("fips" = "STATE"))
+
+stateData <- mutate(stateData, casesPerCapita = cases/population,
+										deathsPerCapita = deaths/population)
+
+# county populations
+countyPopFile <- paste(popDir, "countyPopulations.Rds", sep = "/")
+
+countyPopulations <- readRDS(countyPopFile)
+
+# merge with cases
+countyData <- left_join(countyData, 
+												countyPopulations %>% select(FIPS, population = POPULATION),
+												by = c("fips" = "FIPS"))
+
+countyData <- mutate(countyData, casesPerCapita = cases/population,
+										deathsPerCapita = deaths/population)
+
+```
+
+Joined state- and county-level case and death data with 2019 poulation estimates downloaded from
+`r attr(statePopulations, "source")` on
+`r format.Date(attr(statePopulations, "downloaded"), "%B %d %Y")`.
+
+```{r load_maps}
+# pull in previously downloaded US map data from file
+usMapFile <- paste(dataDir, "usCountyMap.Rds", sep = "/")
+
+countyMapData <- readRDS(usMapFile)
+
+```
+
+Loaded US County map data from *`r usMapFile`*.
+Data was downloaded from `r attr(countyMapData, "source")`
+at `r attr(countyMapData, "downloaded")`.
+
+
+
+```{r subset_last_stateData}
 # get most recent data
 lastStateData <- stateData %>%
 	group_by(state) %>%
@@ -109,15 +186,7 @@ stateData <- stateData %>%
 
 ```
 
-```{r load_county_data}
-# load cases by county
-countyDataFile <- paste(dataDir, "us-counties.csv", sep = "/")
-
-countyData <- read.csv(countyDataFile, header = T, stringsAsFactors = F,
-											 colClasses = c("fips"="character"))
-
-countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
-
+```{r subset_lastCountyData}
 lastCountyData <- countyData %>% 
 	group_by(fips) %>%
 	arrange(desc(date)) %>%
@@ -125,42 +194,29 @@ lastCountyData <- countyData %>%
 	ungroup()
 ```
 
-```{r load_maps}
-# pull in previously downloaded US map data from file
-usMapFile <- paste(here::here(), "data", "usCountyMap.Rds", sep = "/")
-
-countyMapData <- readRDS(usMapFile)
-
-```
-
-Loaded US County map data from *`r normalizePath(usMapFile)`*.
-Data was downloaded from `r attr(countyMapData, "source")`
-at `r attr(countyMapData, "downloaded")`.
-
 # Results
 
 ## State-Level
 
-### Cases
+### Cases per Capita
 ```{r cases_byStateDate}
 # plot cumulative cases by state
 casesByState <- lastStateData %>%
-	mutate(state = fct_reorder(state, cases, .desc = F),
-				 cases = ifelse(cases < 1, (cases + 0.1), cases) )%>%
+	mutate(state = fct_reorder(state, casesPerCapita, .desc = F) )%>%
 	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x= state, y = cases)) +
+	ggplot(aes(x= state, y = casesPerCapita)) +
 	geom_point() +
 	scale_y_log10() +
 	scale_x_discrete(expand = expansion(add = 1)) +
-	labs(title = "Total Cases By State",
-			 y = "Cases", x = "State") +
+	labs(title = "Cumulative Cases Per Capita By State",
+			 y = "Cases per Capita", x = "State") +
 	theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank(),
 				panel.grid.minor.x = element_blank(),
 				panel.grid.major.x = element_blank())
 
 
-p_casesByState <- ggplotly(casesByState, tooltip = c("state", "cases")) %>%
+p_casesByState <- ggplotly(casesByState, tooltip = c("state", "casesPerCapita")) %>%
 	hide_guides() #%>%
 # 		highlight(dynamic = T, selectize = T, persistent = F,
 # 						on = "plotly_click",
@@ -170,12 +226,11 @@ p_casesByState <- ggplotly(casesByState, tooltip = c("state", "cases")) %>%
 
 # plot growth in cases by state
 caseGrowthByState <- stateData %>%
-	mutate(cases = ifelse(cases <1, (cases + 0.1), cases)) %>%
 	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = cases)) +
+	ggplot(aes(x = date, y = casesPerCapita)) +
 	geom_line(aes(group = state)) +
 	labs(title = "Case Growth By State", 
-			 x = "Date", y = "Cases") +
+			 x = "Date", y = "Cases per Capita") +
 	scale_y_log10()
 
 p_caseGrowthByState <- ggplotly(caseGrowthByState) %>%
@@ -225,20 +280,50 @@ p_newCasesState
 
 ```
 
-### Deaths 
+
+### US Per Capita Case Map
+
+```{r caseMap, eval = T}
+
+p_caseMap <- plot_ly() 
+
+p_caseMap <- p_caseMap %>% add_trace(
+    type= "choroplethmapbox",
+    geojson = countyMapData,
+    locations = lastCountyData$fips,
+    z = log10(lastCountyData$casesPerCapita),
+    colorscale = "Viridis",
+    zmin = -1,
+    zmax = -5,
+    marker = list(line = list(
+      width = 0),
+      opacity = 0.5
+    )
+  )
+
+p_caseMap <- p_caseMap %>% layout(
+    mapbox = list(
+      style = "carto-positron",
+      zoom  = 2,
+      center = list(lon =  -95.71, lat = 37.09))
+)
+
+p_caseMap
+```
+
+### Deaths per Capita
 ```{r deaths_byState}
 # plot cumulative cases by state
 deathsByState <- lastStateData %>%
-	mutate(state = fct_reorder(state, deaths, .desc = T),
-				 deaths = ifelse(deaths < 1, (deaths + 0.1), deaths))%>%
+	mutate(state = fct_reorder(state, deathsPerCapita, .desc = T))%>%
 	highlight_key(~state, group = "byState") %>%
 	ggplot(aes(x = state, 
-						 y = deaths)) +
+						 y = deathsPerCapita)) +
 	geom_point() +
 	scale_y_log10() +
 	scale_x_discrete(expand = expansion(add = 1)) +
 	labs(title = "Total Deaths By State",
-			 y = "Deaths", x = "State") +
+			 y = "Deaths per Capia", x = "State") +
 	theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank(),
 				panel.grid.minor.x = element_blank(),
@@ -252,12 +337,11 @@ p_deathsByState <- ggplotly(deathsByState, tooltip = c("state", "deaths")) %>%
   					# defaultValues = highlightState)
 
 deathsGrowthByState <- stateData %>%
-	mutate(deaths = ifelse(deaths <1, (deaths + 0.1), deaths)) %>%
 	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = deaths)) +
+	ggplot(aes(x = date, y = deathsPerCapita)) +
 	geom_line(aes(group = state)) +
 	labs(title = "Death Growth By State", 
-			 x = "Date", y = "Deaths") +
+			 x = "Date", y = "Deaths per Capita") +
 	scale_y_log10()
 
 p_deathsGrowthByState <- ggplotly(deathsGrowthByState) %>%
@@ -310,32 +394,17 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
   					defaultValues = highlightState)
 ```
 
-### US Case Map
+---
+abstract: |
+	State and county-level case and death rates were downloaded
+	from the New York Times repository on
+	`r format.Date(commitTime, format = "%B %d %Y")`.
+	This data contains `r sum(lastStateData$cases)` cases and
+	`r sum(lastStateData$deaths)` deaths in the US.
+---
 
-```{r caseMap, eval = T}
-
-p_caseMap <- plot_ly() 
-
-p_caseMap <- p_caseMap %>% add_trace(
-    type= "choroplethmapbox",
-    geojson = countyMapData,
-    locations = lastCountyData$fips,
-    z = log10(lastCountyData$cases + 1),
-    colorscale = "Viridis",
-    zmin = 0,
-    zmax = 5,
-    marker = list(line = list(
-      width = 0),
-      opacity = 0.5
-    )
-  )
-
-p_caseMap <- p_caseMap %>% layout(
-    mapbox = list(
-      style = "carto-positron",
-      zoom  = 2,
-      center = list(lon =  -95.71, lat = 37.09))
-)
-
-p_caseMap
+# System information
+```{r environment, results = "asis"}
+# summarize environment and session info
+env_doc("table")
 ```
