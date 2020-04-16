@@ -20,27 +20,28 @@ RENDER='Rscript -e "rmarkdown::render($@)"'
 
 # define aliases
 
-all: subdirs data analysis
+all: data # analysis
 
 # subdirs: make sure destination directories are available
-subdirs: $(SUBDIRS)
-
 $(SUBDIRS):
 	mkdir -p $@
 
-.PHONY: all subdirs data #analysis clean
+.PHONY: all data #analysis clean
 
 # data: download data sets
-data: subdirs \
+data: $(SUBDIRS) \
 $(DATA_DIR)/usCountyMap.Rds \
-$(US_POP_DIR)/countyPopulations.Rds
+$(US_POP_DIR)/countyPopulations.Rds \
 $(US_POP_DIR)/us-statesPopulations.Rds
 # $(US_DATA_DIR)/us-counties.csv \
 # $(US_DATA_DIR)/us-states.csv
 
+# download mapfile
 $(DATA_DIR)/usCountyMap.Rds: $(CODE_DIR)/getUsMap.R
-	$(CODE_DIR)/getUsMap.R -o $@
+	Rscript $(CODE_DIR)/getUsMap.R -o $@
 	
-
+$(US_POP_DIR)/countyPopulations.Rds $(US_POP_DIR)/us-statesPopulations.Rds: \
+$(CODE_DIR)/getUsPopulation.R
+	Rscript $(CODE_DIR)/getUsPopulation.R -o $(@D)
 
 
