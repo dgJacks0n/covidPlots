@@ -46,7 +46,6 @@ suppressPackageStartupMessages({
   library(plotly)
   library(envDocument)
   library(knitr)
-	library(git2r)
 	library(here)
 	library(ggToys)
 
@@ -63,58 +62,26 @@ dataDir <- paste(here::here(), "data", sep = "/")
 
 ## Data
 
-Data is compiled by the New York Times and posted to Github at https://github.com/nytimes/covid-19-data.  Data is updated daily.
 
-```{r check_data_status}
-nytDir <- paste(dataDir, "nyt_us", sep = "/")
+```{r load_caseData}
+# load previously downloaded case and death data
+caseDataFile <- paste(dataDir, "usCases.Rds", sep = "/")
 
-# refresh data if older than 'staleness' hours
-staleness <- 24 
+usData <- readRDS(caseDataFile)
 
-# need to add code to check if data is current.
-# right now I'm pulling it in as a submodule.
-lastDataCommit <- git2r::last_commit(nytDir)
+stateData <- usData[["state"]]
 
-commitTime <- as.POSIXct(lastDataCommit$author$when)
+countyData <- usData[["county"]]
 
-age <- as.numeric((Sys.time() - commitTime), units = "hours")
-
-# if data is old, update data and time
-if(age >= staleness) {
-	git2r::pull(nytDir)
-	
-	lastDataCommit <- git2r::last_commit(nytDir)
-
-	commitTime <- as.POSIXct(lastDataCommit$author$when)
-
-}
+# later ops don't preserve attributes; cache download time
+timestamp <- attr(countyData, "downloaded")
 
 ```
 
-Using case and death data from
-`r format.Date(commitTime, format = "%B %d %Y %T", tz = "", usetz = T)`
-
-```{r load_stateData}
-# load state-level data
-stateFile <- paste(nytDir, "us-states.csv", sep  =  "/")
-
-stateData <- read.csv(stateFile, header = T, stringsAsFactors = F)
-
-# convert date
-stateData$date <- as.Date(stateData$date, format = "%Y-%m-%d")
-```
-
-
-
-```{r load_county_data}
-# load cases by county
-countyDataFile <- paste(nytDir, "us-counties.csv", sep = "/")
-
-countyData <- read.csv(countyDataFile, header = T, stringsAsFactors = F,
-											 colClasses = c("fips"="character"))
-
-countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
-```
+Using state-level case data from
+`r attr(stateData, "source")` and county-level case data
+from `r attr(countyData, "source")` downloaded
+`r format.POSIXct(timestamp, "%B %d %y %T")`.
 
 ```{r load_population}
 # load state and county-level population data
@@ -288,7 +255,8 @@ p_newCasesState
 ```{r caseMap, eval = T}
 
 # get min and max values
-min_caserate <- min(floor(na.omit(log10(lastCountyData$casesPer100k))))
+min_caserate <- min(floor(na.omit(log10(lastCountyData$casesPer100k + 0.1))))
+
 max_caserate <- max(ceiling(na.omit(log10(lastCountyData$casesPer100k))))
 
 p_caseMap <- plot_ly() 
@@ -297,7 +265,7 @@ p_caseMap <- p_caseMap %>% add_trace(
     type= "choroplethmapbox",
     geojson = countyMapData,
     locations = lastCountyData$fips,
-    z = log10(lastCountyData$casesPer100k),
+    z = log10(lastCountyData$casesPer100k + 0.1),
     colorscale = "Viridis",
     zmin = min_caserate,
     zmax = max_caserate,
@@ -420,7 +388,7 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
 abstract: |
 	State and county-level case and death rates were downloaded
 	from the New York Times repository on
-	`r format.Date(commitTime, format = "%B %d %Y")`.
+	`r format.POSIXct(timestamp, "%B %d %y %T")`.
 	This data contains `r sum(lastStateData$cases)` cases and
 	`r sum(lastStateData$deaths)` deaths in the US.
 ---

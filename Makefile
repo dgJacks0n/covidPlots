@@ -7,11 +7,10 @@
 PROJ_DIR=.
 CODE_DIR=$(PROJ_DIR)/code
 DATA_DIR=$(PROJ_DIR)/data
-US_DATA_DIR=$(DATA_DIR)/nyt_us
 US_POP_DIR=$(DATA_DIR)/usPopulation2019
 RESULT_DIR=$(PROJ_DIR)/results
 
-SUBDIRS= $(DATA_DIR) $(RESULT_DIR) $(US_DATA_DIR) $(US_POP_DIR)
+SUBDIRS= $(DATA_DIR) $(RESULT_DIR) $(US_POP_DIR)
 
 # commands
 LINK=ln -s $@ $<
@@ -31,10 +30,13 @@ $(SUBDIRS):
 # data: download data sets
 data: $(SUBDIRS) \
 $(DATA_DIR)/usCountyMap.Rds \
+$(DATA_DIR)/usCases.Rds \
 $(US_POP_DIR)/countyPopulations.Rds \
 $(US_POP_DIR)/us-statesPopulations.Rds
-# $(US_DATA_DIR)/us-counties.csv \
-# $(US_DATA_DIR)/us-states.csv
+
+# download cases
+$(DATA_DIR)/usCases.Rds:
+	$(CODE_DIR)/getUsCases.R -o $@
 
 # download mapfile
 $(DATA_DIR)/usCountyMap.Rds: $(CODE_DIR)/getUsMap.R
