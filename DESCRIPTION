@@ -5,7 +5,7 @@ Authors@R:
     person(given = "Donald",
            family = "Jackson",
            role = c("aut", "cre"),
-           email = "14615921+dgJacks0n@users.noreply.github.com ",
+           email = "14615921+dgJacks0n@users.noreply.github.com",
            comment = c(ORCID = "https://orcid.org/0000-0002-0863-9031"))
 Description: What the package does (one paragraph).
 License: GPL-2
@@ -13,6 +13,6 @@ Encoding: UTF-8
 LazyData: true
 Depends:  R (>= 3.6.0)
 Imports: 
-	rjson (>= 0.2.20)
+	rjson (>= 0.2.20),
 	dplyr (>= 0.8.5)
 
