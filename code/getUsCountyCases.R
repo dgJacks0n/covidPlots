@@ -1,0 +1,25 @@
+#' Load county-level data for US COVID-19 cases from New York Times git repo
+#'
+#' @param dataUrl Source URL for county-level data
+#' 
+#' @return data frame of county-level data with attributes 'source' (dataUrl) and 'timestamp' (download time)
+#' 
+#' @export
+
+getUsCountyCases <- function(dataUrl = 
+														 	"https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv") {
+	# read data
+	countyData <- read.csv(dataUrl, header = T, stringsAsFactors = F,
+												 colClasses = c("fips"="character"))
+	
+	# convert date
+	countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
+	
+	# annotate source and download time
+	attr(countyData, "source") <- dataUrl
+	
+	attr(countyData, "timestamp") <- Sys.time()
+	
+	return(countyData)
+	
+}
