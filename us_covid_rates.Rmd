@@ -41,6 +41,7 @@ Generate exploratory visualizations for US COVID-19 infection and death rates us
 
 suppressPackageStartupMessages({
   library(tidyverse)
+	library(zoo)
   library(lubridate)
   library(viridis)
   library(plotly)
@@ -221,19 +222,17 @@ subplot(p_casesByState, p_caseGrowthByState,
 ```
 
 ```{r new_cases_by_state}
-# plot 3 day rolling average
+# plot 5 day rolling average
 newCasesState <- stateData %>%
 	group_by(state) %>%
 	arrange(date, .by_group = T) %>%
-	mutate(prev_cases = lag(new_cases, 1), 
-				 prev_by2_cases = lag(new_cases, 2)) %>%
+	mutate(rmean_new_cases = 0.1 + rollmean(new_cases, 5, fill = NA, align = "right")) %>%
 	ungroup() %>%
-	mutate(rmean_new_cases = 0.1 + select(., new_cases, prev_cases, prev_by2_cases) %>%
-				 	rowMeans(., na.rm = T)) %>%
+	filter(!is.na(rmean_new_cases)) %>%
 	highlight_key(~state, group = "byState") %>%
 	ggplot(aes(x = date, y = rmean_new_cases)) +
 	geom_line(aes(group = state)) +
-	labs(y = "New Cases (3 day average)", x = "Date",
+	labs(y = "New Cases (5 day average)", x = "Date",
 			 title = "New Cases By State") +
 	scale_y_log10()
 
@@ -249,6 +248,49 @@ p_newCasesState
 
 ```
 
+```{r case_growth}
+# rolling case growth vs time
+fit_cases <- function(vals) {
+	# assuming we have 1 obs per day
+	fitdata <- data.frame(index = 1:length(vals),
+												values = vals,
+												log10values = log10(vals)) %>%
+		filter(values > 0)
+	
+	if(nrow(fitdata) < 3) { return(NA) }
+	
+	# fit log10 values vs index
+	myfit <- try( lm(log10values ~ index, fitdata))
+	
+	if(class(myfit) != "lm") { return(NA) }
+	
+	# get slope and antilog
+	logslope <- coef(myfit)["index"]
+	
+	slope <- 10^logslope
+
+	return(slope)
+}
+
+growthRate <- stateData %>%
+	group_by(state) %>%
+	arrange(date, .by_group = T) %>%
+	mutate(case_growth = rollapply(cases, 7, fit_cases, fill = NA, align = "right")) %>%
+	ungroup %>%
+	highlight_key(~state, group = "byState") %>%
+	ggplot(aes(x = date, y = case_growth, group = state)) +
+		geom_line() +
+	labs(x = "Date", y = "Fold Growth per Day", title = "Case Growth Rates", subtitle = "7 d average")
+
+# growthRate
+
+p_growthRate <- ggplotly(growthRate) %>%
+	highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+p_growthRate
+```
 
 ### US Case Map
 
