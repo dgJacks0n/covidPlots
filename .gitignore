@@ -4,4 +4,4 @@
 .Ruserdata
 *.html
 *.Rds
-data/*
+NAMESPACE
