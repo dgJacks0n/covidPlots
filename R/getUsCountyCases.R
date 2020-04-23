@@ -1,4 +1,7 @@
-#' Load county-level data for US COVID-19 cases from New York Times git repo
+#' Get county-level case and death counts and rates
+#' 
+#' Load county-level data for US COVID-19 cases from New York Times git repo.
+#' Add population from 'getUsCountyPopulation' and calculate per capita case and death rates
 #'
 #' @param dataUrl Source URL for county-level data
 #' 
@@ -19,6 +22,19 @@ getUsCountyCases <- function(dataUrl =
 	attr(countyData, "source") <- dataUrl
 	
 	attr(countyData, "timestamp") <- Sys.time()
+	
+	# add population and calculate per capita case and deathrates
+
+	countyPopulations <- getUsCountyPopulation()
+	
+	# merge with cases
+	countyData <- left_join(countyData, 
+													countyPopulations %>% select(FIPS, population = POPULATION),
+													by = c("fips" = "FIPS"))
+	
+	countyData$cases_per_capita <- with(countyData,  (cases/population))
+	
+	countyData$deaths_per_capita <- with(countyData, (deaths/population))
 	
 	return(countyData)
 	

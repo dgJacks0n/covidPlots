@@ -40,15 +40,16 @@ Generate exploratory visualizations for US COVID-19 infection and death rates us
 ```{r packages}
 
 suppressPackageStartupMessages({
-  library(tidyverse)
-	library(zoo)
-  library(lubridate)
-  library(viridis)
-  library(plotly)
-  library(envDocument)
-  library(knitr)
-	library(here)
-	library(ggToys)
+	library(covidPlots)
+	library(envDocument)
+#   library(tidyverse)
+# 	library(zoo)
+#   library(lubridate)
+#   library(viridis)
+#   library(plotly)
+#   library(knitr)
+# 	library(here)
+library(ggToys)
 
 })
 
@@ -58,70 +59,27 @@ suppressPackageStartupMessages({
 # set default ggplot theme
 ggplot2::theme_set(theme_dj())
 
-dataDir <- paste(here::here(), "data", sep = "/")
 ```
 
 ## Data
 
 
 ```{r load_caseData}
-# load previously downloaded case and death data
-caseDataFile <- paste(dataDir, "usCases.Rds", sep = "/")
+# load state and county case data
 
-usData <- readRDS(caseDataFile)
+stateData <- getUsStateCases()
 
-stateData <- usData[["state"]]
-
-countyData <- usData[["county"]]
-
-# later ops don't preserve attributes; cache download time
-timestamp <- attr(countyData, "downloaded")
+countyData <- getUsCountyCases()
 
 ```
 
-Using state-level case data from
-`r attr(stateData, "source")` and county-level case data
-from `r attr(countyData, "source")` downloaded
-`r format.POSIXct(timestamp, "%B %d %y %T")`.
+Using state-level case data downloaded from
+`r attr(stateData, "source")` at
+`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %y %T")`
+and county-level case data downloaded from
+`r attr(countyData, "source")` at
+`r format.POSIXct(attr(countyData, "timestamp", "%B %d %y %T"))`.
 
-```{r load_population}
-# load state and county-level population data
-
-popDir <- paste(dataDir, "usPopulation2019", sep = "/")
-
-# state populations
-statePopFile <- paste(popDir, "statePopulations.Rds", sep = "/")
-
-statePopulations <- readRDS(statePopFile)
-
-# add to state data
-stateData <- left_join(stateData, 
-											 statePopulations %>% select(STATE, population = POPULATION),
-											 by = c("fips" = "STATE"))
-
-stateData$casesPer100k <- with(stateData, cases/(population/1e05))
-
-stateData$deathsPer100k <-with(stateData, deaths/(population/1e05))
-
-# county populations
-countyPopFile <- paste(popDir, "countyPopulations.Rds", sep = "/")
-
-countyPopulations <- readRDS(countyPopFile)
-
-# merge with cases
-countyData <- left_join(countyData, 
-												countyPopulations %>% select(FIPS, population = POPULATION),
-												by = c("fips" = "FIPS"))
-
-countyData$casesPer100k <- with(countyData,  cases/(population/1e05))
-
-countyData$deathsPer100k <- with(countyData, deaths/(population/1e05))
-
-```
-
-Joined state- and county-level case and death data with 2019 poulation estimates downloaded from
-`r attr(statePopulations, "source")` on
-`r format.Date(attr(statePopulations, "downloaded"), "%B %d %Y")`.
 
 ```{r load_maps}
 # pull in previously downloaded US map data from file

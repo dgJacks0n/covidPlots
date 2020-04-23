@@ -1,4 +1,7 @@
-#' Load state-level data for US COVID-19 cases from New York Times git repo
+#' Get state-level case and death counts and rates
+#' 
+#' Load state-level data for US COVID-19 cases from New York Times git repo.
+#' Add population from 'getUsCountyPopulation' and calculate per capita case and death rates
 #' 
 #' @param dataUrl Source URL for data
 #' 
@@ -20,6 +23,19 @@ getUsStateCases <- function(dataUrl =
 	attr(stateData, "source") <- dataUrl
 	
 	attr(stateData, "timestamp") <- Sys.time()
+	
+	# add population estimates
+	statePopulations <- getUsStatePopulation()
+	
+	stateData <- left_join(stateData, 
+												 statePopulations %>% select(STATE, population = POPULATION),
+												 by = c("fips" = "STATE"))
+	
+	# calculate per capita case rates
+	stateData$cases_per_capita <- with(stateData, (cases/population))
+	
+	stateData$deaths_per_capita <-with(stateData, (deaths/population))
+	
 	
 	return(stateData)
 }
