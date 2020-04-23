@@ -82,23 +82,17 @@ and county-level case data downloaded from
 
 
 
-```{r subset_last_stateData}
+```{r subset_last_Data}
 # get most recent data
-lastStateData <- stateData %>%
-	group_by(state) %>%
-	arrange(desc(date), .by_group = T) %>%
-	slice(1) %>%
-	ungroup()
+lastStateData <- getLastStateData()
 
+lastCountyData <- getLastCountyData()
 
 ```
 
-```{r subset_lastCountyData}
-lastCountyData <- countyData %>% 
-	group_by(fips) %>%
-	arrange(desc(date)) %>%
-	slice(1) %>%
-	ungroup()
+```{r load_map}
+# load us map as json for chloropleth map
+usMap <- getUsMap()
 ```
 
 # Results
@@ -242,7 +236,7 @@ p_caseMap <- plot_ly()
 
 p_caseMap <- p_caseMap %>% add_trace(
     type= "choroplethmapbox",
-    geojson = getUsMap(),
+    geojson = usMap,
     locations = lastCountyData$fips,
     z = log10(lastCountyData$casesPer100k + 0.1),
     colorscale = "Viridis",
