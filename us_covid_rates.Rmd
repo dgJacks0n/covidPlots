@@ -81,19 +81,6 @@ and county-level case data downloaded from
 `r format.POSIXct(attr(countyData, "timestamp", "%B %d %y %T"))`.
 
 
-```{r load_maps}
-# pull in previously downloaded US map data from file
-usMapFile <- paste(dataDir, "usCountyMap.Rds", sep = "/")
-
-countyMapData <- readRDS(usMapFile)
-
-```
-
-Loaded US County map data from *`r usMapFile`*.
-Data was downloaded from `r attr(countyMapData, "source")`
-at `r attr(countyMapData, "downloaded")`.
-
-
 
 ```{r subset_last_stateData}
 # get most recent data
@@ -101,14 +88,6 @@ lastStateData <- stateData %>%
 	group_by(state) %>%
 	arrange(desc(date), .by_group = T) %>%
 	slice(1) %>%
-	ungroup()
-
-# Values for cases and deaths are cumulative, need to get new
-stateData <- stateData %>%
-	group_by(state) %>%
-	arrange(date, .by_group = T) %>%
-	mutate(new_cases = cases - lag(cases, default = first(cases)),
-				 new_deaths = deaths - lag(deaths, default = first(deaths))) %>%
 	ungroup()
 
 
@@ -263,7 +242,7 @@ p_caseMap <- plot_ly()
 
 p_caseMap <- p_caseMap %>% add_trace(
     type= "choroplethmapbox",
-    geojson = countyMapData,
+    geojson = getUsMap(),
     locations = lastCountyData$fips,
     z = log10(lastCountyData$casesPer100k + 0.1),
     colorscale = "Viridis",
