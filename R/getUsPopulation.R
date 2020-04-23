@@ -21,22 +21,26 @@ getUsPopulation <- function(dataUrl =
 	
 	# Extract state level data
 	usPopByState <- dplyr::filter(usPopData, SUMLEV == 40) %>%
-		select(-SUMLEV, -COUNTY, -CTYNAME)
+		dplyr::select(-SUMLEV, -COUNTY, -CTYNAME)
 	
 	
 	# tag with source and download time and save
-	attr(usPopByState, "source") <- usPopUrl
+	attr(usPopByState, "source") <- dataUrl
 	
 	attr(usPopByState, "downloaded") <- downloaded
 	
 	
 	# extract county level data, tag and save
-	usPopByCounty <- dplyr::filter(usPopData, SUMLEV == 50)
+	usPopByCounty <- dplyr::filter(usPopData, SUMLEV == 50) %>%
+		dplyr::select(-SUMLEV)
 	
 	# need to add formated concatenation of state and county code for FIPS
 	usPopByCounty$FIPS <- with(usPopByCounty, sprintf("%02i%03i", STATE, COUNTY))
 	
-	attr(usPopByCounty, "source") <- usPopUrl
+	# move population to last column
+	usPopByCounty <- dplyr::select(usPopByCounty, -POPULATION, POPULATION)
+	
+	attr(usPopByCounty, "source") <- dataUrl
 	
 	attr(usPopByCounty, "downloaded") <- downloaded
 	
@@ -52,7 +56,12 @@ getUsPopulation <- function(dataUrl =
 #' 
 #' @param ... Passed through to getUsPopulation
 #' 
-#' @return Data frame with population by state (no posessions)
+#' @return Data frame with population by state (no posessions) with columns:
+#' REGION numeric code for region (time zone?)
+#' DIVISION numeric code for division (e.g. New England?)
+#' STATE numeric FIPS code for state
+#' STNAME full name of state
+#' POPULATION population estimate
 #' 
 #' @export
 
@@ -69,9 +78,18 @@ getUsStatePopulation <- function(...) {
 #' 
 #' @param ... Passed through to getUsPopulation
 #' 
-#' @return Data frame with population by county (no cities)
+#' @return Data frame with population by county (no cities) with columns:
+#' REGION numeric code for region (time zone?)
+#' DIVISION numeric code for division (e.g. New England?)
+#' STATE numeric FIPS code for state
+#' STNAME full name of state
+#' COUNTY numeric code for county (nested within STATE)
+#' CTYNAME Full name of county
+#' FIPS fips code for county (aggregation of state and county codes)
+#' POPULATION population estimate
 #' 
 #' @export
+
 getUsCountyPopulation <- function(...) {
 	allPopData <- getUsPopulation(...)
 	
