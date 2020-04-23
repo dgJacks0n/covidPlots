@@ -24,10 +24,18 @@ getUsStateCases <- function(dataUrl =
 	
 	attr(stateData, "timestamp") <- Sys.time()
 	
+	# Values for cases and deaths are cumulative, need to get new
+	stateData <- stateData %>%
+		dplyr::group_by(state) %>%
+		dplyr::arrange(date, .by_group = T) %>%
+		dplyr::mutate(new_cases = cases - lag(cases, default = first(cases)),
+					 new_deaths = deaths - lag(deaths, default = first(deaths))) %>%
+		dplyr::ungroup()
+	
 	# add population estimates
 	statePopulations <- getUsStatePopulation()
 	
-	stateData <- left_join(stateData, 
+	stateData <- dplyr::left_join(stateData, 
 												 statePopulations %>% select(STATE, population = POPULATION),
 												 by = c("fips" = "STATE"))
 	
