@@ -15,6 +15,9 @@ getUsCountyCases <- function(dataUrl =
 	countyData <- read.csv(dataUrl, header = T, stringsAsFactors = F,
 												 colClasses = c("fips"="character"))
 	
+	# remove cases with 'unknown' 
+	countyData <- dplyr::filter(countyData, county != "Unknown")
+	
 	# convert date
 	countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
 	
@@ -23,13 +26,17 @@ getUsCountyCases <- function(dataUrl =
 	
 	attr(countyData, "timestamp") <- Sys.time()
 	
+	# calculate new cases
+	countyData <- newEvents(countyData, "county")
+	
 	# add population and calculate per capita case and deathrates
 
-	countyPopulations <- getUsCountyPopulation()
+	countyPopulations <- getUsCountyPopulation() %>% 
+		dplyr::select(FIPS, population = POPULATION)
 	
 	# merge with cases
-	countyData <- left_join(countyData, 
-													countyPopulations %>% select(FIPS, population = POPULATION),
+	countyData <- dplyr::left_join(countyData, 
+													countyPopulations,
 													by = c("fips" = "FIPS"))
 	
 	countyData$cases_per_capita <- with(countyData,  (cases/population))

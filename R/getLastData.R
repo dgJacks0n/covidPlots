@@ -8,7 +8,7 @@
 #' @return data frame with only the most recent observation for each value of level. 
 
 getLastData <- function(myData, level = c("state", "county")) {
-	# match on state for state-level but use fips for county-level
+	# use on state for state-level but use fips for county-level
 	myLevel <- ifelse((match.arg(level) == "state"), "state", "fips")
 	
 	# check inputs
