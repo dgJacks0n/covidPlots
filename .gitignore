@@ -5,3 +5,5 @@
 *.html
 *.Rds
 NAMESPACE
+man
+man/*
