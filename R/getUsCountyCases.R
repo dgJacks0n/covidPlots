@@ -15,16 +15,14 @@ getUsCountyCases <- function(dataUrl =
 	countyData <- read.csv(dataUrl, header = T, stringsAsFactors = F,
 												 colClasses = c("fips"="character"))
 	
+	# record download time
+	dtime <- Sys.time()
+	
 	# remove cases with 'unknown' 
 	countyData <- dplyr::filter(countyData, county != "Unknown")
 	
 	# convert date
 	countyData$date <- as.Date(countyData$date, format = "%Y-%m-%d")
-	
-	# annotate source and download time
-	attr(countyData, "source") <- dataUrl
-	
-	attr(countyData, "timestamp") <- Sys.time()
 	
 	# calculate new cases
 	countyData <- newEvents(countyData, "county")
@@ -42,6 +40,12 @@ getUsCountyCases <- function(dataUrl =
 	countyData$cases_per_capita <- with(countyData,  (cases/population))
 	
 	countyData$deaths_per_capita <- with(countyData, (deaths/population))
+	
+	# annotate source and download time
+	attr(countyData, "source") <- dataUrl
+	
+	attr(countyData, "timestamp") <- dtime
+	
 	
 	return(countyData)
 	

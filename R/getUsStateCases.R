@@ -16,13 +16,11 @@ getUsStateCases <- function(dataUrl =
 	# load state-level data
 	stateData <- read.csv(dataUrl, header = T, stringsAsFactors = F)
 	
+	# record download time
+	dtime <- Sys.time()
+	
 	# convert date
 	stateData$date <- as.Date(stateData$date, format = "%Y-%m-%d") 
-	
-	# record source and download time as attributes
-	attr(stateData, "source") <- dataUrl
-	
-	attr(stateData, "timestamp") <- Sys.time()
 	
 	# Values for cases and deaths are cumulative, need to get new
 	stateData <- newEvents(stateData, "state") 
@@ -39,6 +37,11 @@ getUsStateCases <- function(dataUrl =
 	stateData$cases_per_capita <- with(stateData, (cases/population))
 	
 	stateData$deaths_per_capita <-with(stateData, (deaths/population))
+	
+	# record source and download time as attributes
+	attr(stateData, "source") <- dataUrl
+	
+	attr(stateData, "timestamp") <- dtime
 	
 	
 	return(stateData)
