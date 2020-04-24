@@ -16,7 +16,9 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, 
+											message = FALSE,
+											fig.path = paste(here::here(), "results", "us", "", sep = "/"))
 
 # get state to highlight
 highlightState <-  params$highlightState
@@ -103,38 +105,20 @@ usMap <- getUsMap()
 ```{r cases_byStateDate}
 #
 
-p_casesByState <- ggplotly(casesByState, tooltip = c("state", "casesPer100k")) %>%
-	hide_guides() #%>%
-# 		highlight(dynamic = T, selectize = T, persistent = F,
-# 						on = "plotly_click",
-#   					defaultValues = highlightState)
+p_casesByState <- plotCurrentCount(lastStateData, xCol = "state",
+																	 value = "cases_per_capita",
+																	 hGroupName = "byState")
 
-# p_casesByState
+p_caseGrowthByState <- plotEventVTime(stateData, value = "cases_per_capita",
+																			hGroupName = "byState")
 
-# plot growth in cases by state
-caseGrowthByState <- stateData %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = casesPer100k)) +
-	geom_line(aes(group = state)) +
-	labs(title = "Case Growth By State", 
-			 x = "Date", y = "Cases per 100k People") +
-	scale_y_log10()
-
-p_caseGrowthByState <- ggplotly(caseGrowthByState) %>%
-	hide_guides() #%>%
-# 	highlight(dynamic = T, selectize = T, persistent = F,
-# 						on = "plotly_click",
-#   					defaultValues = highlightState)
-
-# p_caseGrowthByState
-
-subplot(p_casesByState, p_caseGrowthByState,
-				widths = c(0.25, 0.75),
-				shareX = F, shareY = T,
-				which_layout = 1) %>%
-			highlight(dynamic = T, selectize = T, persistent = F,
-						on = "plotly_click",
-  					defaultValues = highlightState)
+plotly::subplot(p_casesByState, p_caseGrowthByState,
+								widths = c(0.25, 0.75),
+								shareX = F, shareY = T,
+								which_layout = 1) %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+										on = "plotly_click",
+										defaultValues = highlightState)
 
 ```
 
