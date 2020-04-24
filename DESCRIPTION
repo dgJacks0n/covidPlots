@@ -15,5 +15,9 @@ Depends: R (>= 3.6.0)
 Imports: 
 	rjson (>= 0.2.20),
 	dplyr (>= 0.8.5),
-	magrittr (>= 1.5)
+	magrittr (>= 1.5),
+	forcats,
+	ggplot2,
+	plotly,
+	stringr
 RoxygenNote: 7.1.0
