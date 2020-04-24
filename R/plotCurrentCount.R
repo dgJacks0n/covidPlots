@@ -4,15 +4,16 @@
 #' @param xCol column to use for x axis
 #' @param value column in pData with plot values
 #' @param usePlotly make plot interactive using plotly?
-#' @param hGroup grouping name for interactive plot
+#' @param hKey column for interactive data grouping
+#' @param hGroupName grouping name for interactive plot
 #' 
-#' @return ggplot or plotly plot of
+#' @return ggplot or plotly plot of current total cases
 #' 
 #' @export
 
 plotCurrentCount <- function(pData, xCol = c("state", "county"),
 													 value = c("cases", "cases_per_capita", "deaths", "deaths_per_capita"),
-													 usePlotly = T, hGroup = as.character(NA)) {
+													 usePlotly = T, hKey = NA, hGroupName = NA) {
 	# get x axis column
 	pGroup <- match.arg(xCol)
 	
@@ -25,11 +26,20 @@ plotCurrentCount <- function(pData, xCol = c("state", "county"),
 	pData[[pGroup]] <- forcats::fct_reorder(pData[[pGroup]], pData[[valCol]], .desc = F)
 	
 	# set highlight key for interactive plots
-	#if(usePlotly) {
-		if(!is.na(hGroup)) {
-			pData <- plotly::highlight_key(as.formula(paste("~", pGroup)), group = hGroup)
+	if(usePlotly) {
+		# group by level unless specified otherwise
+		hKey <- ifelse(!is.na(hKey), hKey, pGroup)
+		
+		if(!(hKey %in% colnames(pData))) {
+			stop("Highlight key ", hKey, " is not a column in the plot data")
 		}
-	#}
+		
+		# define group name if not provided
+		hGroupName <- ifelse(!is.na(hGroupName), hGroupName, hKey)
+		
+		pData <- pData %>% plotly::highlight_key(key = hKey, group = hGroupName)
+		
+	}
 	
 	# define plot title and labels
 	xLabel <- stringr::str_to_title(gsub("_", " ", pGroup))
@@ -53,11 +63,7 @@ plotCurrentCount <- function(pData, xCol = c("state", "county"),
 	# if a static plot is needed we're done
 	if(!usePlotly) { return(sPlot) }
 	
-	iPlot <- plotly::ggplotly(sPlot) %>%
-		plotly::hide_guides() %>%
-		plotly::highlight(dynamic = T, selectize = T, persistent = F,
-							on = "plotly_click",
-							defaultValues = highlightState)
+	iPlot <- plotly::ggplotly(sPlot) 
 	
 	return(iPlot)
 }
