@@ -84,9 +84,9 @@ and county-level case data downloaded from
 
 ```{r subset_last_Data}
 # get most recent data
-lastStateData <- getLastStateData()
+lastStateData <- getLastStateData(stateData)
 
-lastCountyData <- getLastCountyData()
+lastCountyData <- getLastCountyData(countyData)
 
 ```
 
@@ -101,21 +101,7 @@ usMap <- getUsMap()
 
 ### Cases per 100k People
 ```{r cases_byStateDate}
-# plot cumulative cases by state
-casesByState <- lastStateData %>%
-	mutate(state = fct_reorder(state, casesPer100k, .desc = F) )%>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x= state, y = casesPer100k)) +
-	geom_point() +
-	scale_y_log10() +
-	scale_x_discrete(expand = expansion(add = 1)) +
-	labs(title = "Cumulative Cases per 100k People By State",
-			 y = "Cases per 100k People", x = "State") +
-	theme(axis.text.x = element_blank(),
-				axis.ticks.x = element_blank(),
-				panel.grid.minor.x = element_blank(),
-				panel.grid.major.x = element_blank())
-
+#
 
 p_casesByState <- ggplotly(casesByState, tooltip = c("state", "casesPer100k")) %>%
 	hide_guides() #%>%
