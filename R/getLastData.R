@@ -16,10 +16,10 @@ getLastData <- function(myData, level = c("state", "county")) {
 	stopifnot(myLevel %in% colnames(myData))
 	
 	last <- myData %>%
-		group_by_at(myLevel) %>%
-		arrange(desc(date), .by_group = T) %>%
-		slice(1) %>%
-		ungroup()
+		dplyr::group_by_at(myLevel) %>%
+		dplyr::arrange(desc(date), .by_group = T) %>%
+		dplyr::slice(1) %>%
+		dplyr::ungroup()
 	
 	return(last)
 }
