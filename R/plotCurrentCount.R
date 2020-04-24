@@ -37,7 +37,8 @@ plotCurrentCount <- function(pData, xCol = c("state", "county"),
 		# define group name if not provided
 		hGroupName <- ifelse(!is.na(hGroupName), hGroupName, hKey)
 		
-		pData <- pData %>% plotly::highlight_key(key = hKey, group = hGroupName)
+		pData <- pData %>% plotly::highlight_key(key = as.formula(paste0("~", hKey)), 
+																						 group = hGroupName)
 		
 	}
 	

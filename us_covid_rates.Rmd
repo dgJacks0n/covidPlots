@@ -101,7 +101,7 @@ usMap <- getUsMap()
 
 ## State-Level
 
-### Cases per 100k People
+### Cases per Capita
 ```{r cases_byStateDate}
 #
 
