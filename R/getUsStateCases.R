@@ -26,7 +26,8 @@ getUsStateCases <- function(dataUrl =
 	stateData <- newEvents(stateData, "state") 
 	
 	# add population estimates
-	statePopulations <- getUsStatePopulation() %>% 
+	# statePopulations <- getUsStatePopulation() %>% 
+	drake::loadd(statePopulations) %>%
 		dplyr::select(STATE, population = POPULATION)
 	
 	stateData <- dplyr::left_join(stateData, 

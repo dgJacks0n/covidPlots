@@ -29,7 +29,8 @@ getUsCountyCases <- function(dataUrl =
 	
 	# add population and calculate per capita case and deathrates
 
-	countyPopulations <- getUsCountyPopulation() %>% 
+	#countyPopulations <- getUsCountyPopulation() %>% 
+	drake::loadd(countyPopulations) %>%
 		dplyr::select(FIPS, population = POPULATION)
 	
 	# merge with cases

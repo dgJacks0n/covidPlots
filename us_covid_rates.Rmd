@@ -46,6 +46,7 @@ suppressPackageStartupMessages({
 	library(envDocument)
 	library(here)
 	library(ggToys)
+	library(drake)
 
 })
 
@@ -63,9 +64,13 @@ ggplot2::theme_set(theme_dj())
 ```{r load_caseData}
 # load state and county case data
 
-stateData <- getUsStateCases()
+# stateData <- drake::readd(stateData)
+# 
+# countyData <- getUsCountyCases()
 
-countyData <- getUsCountyCases()
+loadd(stateData)
+
+loadd(countyData)
 
 ```
 
@@ -80,15 +85,22 @@ and county-level case data downloaded from
 
 ```{r subset_last_Data}
 # get most recent data
-lastStateData <- getLastStateData(stateData)
+# lastStateData <- getLastStateData(stateData)
+# 
+# lastCountyData <- getLastCountyData(countyData)
 
-lastCountyData <- getLastCountyData(countyData)
+loadd(lastStateData)
+
+loadd(lastCountyData)
 
 ```
 
 ```{r load_map}
 # load us map as json for chloropleth map
-usMap <- getUsMap()
+# usMap <- getUsMap()
+
+loadd(usMap)
+
 ```
 
 # Results
