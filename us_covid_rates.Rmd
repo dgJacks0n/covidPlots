@@ -44,14 +44,8 @@ Generate exploratory visualizations for US COVID-19 infection and death rates us
 suppressPackageStartupMessages({
 	library(covidPlots)
 	library(envDocument)
-#   library(tidyverse)
-# 	library(zoo)
-#   library(lubridate)
-#   library(viridis)
-#   library(plotly)
-#   library(knitr)
-# 	library(here)
-library(ggToys)
+	library(here)
+	library(ggToys)
 
 })
 
@@ -77,10 +71,10 @@ countyData <- getUsCountyCases()
 
 Using state-level case data downloaded from
 `r attr(stateData, "source")` at
-`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %y %T")`
+`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %Y %T")`
 and county-level case data downloaded from
 `r attr(countyData, "source")` at
-`r format.POSIXct(attr(countyData, "timestamp", "%B %d %y %T"))`.
+`r format.POSIXct(attr(countyData, "timestamp", "%B %d %Y %T"))`.
 
 
 
@@ -103,7 +97,6 @@ usMap <- getUsMap()
 
 ### Cases per Capita
 ```{r cases_byStateDate}
-#
 
 p_casesByState <- plotCurrentCount(lastStateData, xCol = "state",
 																	 value = "cases_per_capita",
@@ -123,25 +116,11 @@ plotly::subplot(p_casesByState, p_caseGrowthByState,
 ```
 
 ```{r new_cases_by_state}
-# plot 5 day rolling average
-newCasesState <- stateData %>%
-	group_by(state) %>%
-	arrange(date, .by_group = T) %>%
-	mutate(rmean_new_cases = 0.1 + rollmean(new_cases, 5, fill = NA, align = "right")) %>%
-	ungroup() %>%
-	filter(!is.na(rmean_new_cases)) %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = rmean_new_cases)) +
-	geom_line(aes(group = state)) +
-	labs(y = "New Cases (5 day average)", x = "Date",
-			 title = "New Cases By State") +
-	scale_y_log10()
+# plot new cases as rolling average
 
-# newCasesState
-
-p_newCasesState <- ggplotly(newCasesState) %>%
-	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = F,
+p_newCasesState <- plotNewEvents(stateData, event = "new_cases", 
+																 hGroupName = "byState") %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
 						on = "plotly_click",
 						defaultValues = highlightState)
 
@@ -149,7 +128,7 @@ p_newCasesState
 
 ```
 
-```{r case_growth}
+```{r case_growth, eval = F}
 # rolling case growth vs time
 fit_cases <- function(vals) {
 	# assuming we have 1 obs per day
@@ -195,7 +174,7 @@ p_growthRate
 
 ### US Case Map
 
-```{r caseMap, eval = T}
+```{r caseMap, eval = F}
 
 # get min and max values
 min_caserate <- min(floor(na.omit(log10(lastCountyData$casesPer100k + 0.1))))
@@ -245,53 +224,43 @@ p_caseMap
 ```
 
 ### Deaths per Capita
-```{r deaths_byState}
-# plot cumulative cases by state
-deathsByState <- lastStateData %>%
-	mutate(state = fct_reorder(state, deathsPer100k, .desc = T))%>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = state, 
-						 y = deathsPer100k)) +
-	geom_point() +
-	scale_y_log10() +
-	scale_x_discrete(expand = expansion(add = 1)) +
-	labs(title = "Total Deaths By State",
-			 y = "Deaths per Capia", x = "State") +
-	theme(axis.text.x = element_blank(),
-				axis.ticks.x = element_blank(),
-				panel.grid.minor.x = element_blank(),
-				panel.grid.major.x = element_blank())
+```{r deaths_byStateDate}
+p_deathsByState <- plotCurrentCount(lastStateData, xCol = "state",
+																	 value = "deaths_per_capita",
+																	 hGroupName = "byState")
 
+p_caseGrowthByState <- plotEventVTime(stateData, value = "deaths_per_capita",
+																			hGroupName = "byState")
 
-p_deathsByState <- ggplotly(deathsByState, tooltip = c("state", "deaths")) %>%
-	hide_guides() #%>%
-	# highlight(dynamic = T, selectize = T, persistent = F,
-						# on = "plotly_click",
-  					# defaultValues = highlightState)
-
-deathsGrowthByState <- stateData %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = deathsPer100k)) +
-	geom_line(aes(group = state)) +
-	labs(title = "Death Growth By State", 
-			 x = "Date", y = "Deaths per Capita") +
-	scale_y_log10()
-
-p_deathsGrowthByState <- ggplotly(deathsGrowthByState) %>%
-	hide_guides()
-
-subplot(p_deathsByState, p_deathsGrowthByState,
-				widths = c(0.25, 0.75),
-				shareX = F, shareY = T,
-				which_layout = 1) %>%
-			highlight(dynamic = T, selectize = T, persistent = F,
-						on = "plotly_click",
-  					defaultValues = highlightState)
+plotly::subplot(p_deathsByState, p_caseGrowthByState,
+								widths = c(0.25, 0.75),
+								shareX = F, shareY = T,
+								which_layout = 1) %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+										on = "plotly_click",
+										defaultValues = highlightState)
 
 ```
 
+```{r new_deaths_by_state}
+# plot new deaths as rolling average
+
+p_newDeathsState <- plotNewEvents(stateData, event = "new_deaths", 
+																 hGroupName = "byState") %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+p_newDeathsState
+
+```
+
+
+
+
+
 ### Fatality Rate By State
-```{r state_deathsPerCase}
+```{r state_deathsPerCase, eval = F}
 p_cfrByState <- lastStateData %>%
 	filter(deaths > 0) %>%
 	highlight_key(~state, group = "byState") %>%
@@ -310,7 +279,7 @@ ggplotly(p_cfrByState, tooltip = c("all")) %>%
   					defaultValues = highlightState)
 ```
 
-```{r state_cfrByDate}
+```{r state_cfrByDate, eval = F}
 p_cfrByStateDate <- stateData %>%
 	filter(deaths > 0) %>%
 	highlight_key(~state, group = "byState") %>%
@@ -331,7 +300,7 @@ ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
 abstract: |
 	State and county-level case and death rates were downloaded
 	from the New York Times repository on
-	`r format.POSIXct(timestamp, "%B %d %y %T")`.
+	`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %Y")`.
 	This data contains `r sum(lastStateData$cases)` cases and
 	`r sum(lastStateData$deaths)` deaths in the US.
 ---
