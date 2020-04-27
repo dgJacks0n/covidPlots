@@ -1,19 +1,23 @@
 #' Calculate rolling average of new cases or deaths
 #' 
+#' @param eData Event data at state or county level
 #' @param event Type of event
 #' @param group Level to group events at
 #' @param window Window for rolling average in days (positive integer)
+#' @param dropNAs Exclude NA values from zoo::rollmean
 #' 
-#' @return data frame with new collumn for rolling average.  Rolling average will be NA
-#'  for rows with fewer than window  prior days.  Window size is recorded as a column attribute
+#' @return data frame with new collumn for rolling average.  
+#'  Window size and new column with rolling average are recorded as 
+#'  attributes 'window' and 'avgCol' of the data frame
 #' 
 #' @export
 
 eventRollingAverage <- function(eData, event = c("new_cases", "new_deaths"), 
-																group = c("state", "county"), window = 7) {
+																group = c("state", "county"), window = 7,
+																dropNAs = T) {
 
 	# check that window is a positive integer
-	stopifnot(is.integer(window) & window > 0)
+	stopifnot(is.numeric(window) & window > 0)
 	
 	# get event selection 
 	myEvent <- match.arg(event)
@@ -42,8 +46,13 @@ eventRollingAverage <- function(eData, event = c("new_cases", "new_deaths"),
 										 zoo::rollmean, window, fill = NA, align = "right") %>%
 		dplyr::ungroup() 
 	
-	attr(rollingAvg, avgCol) <- myEvent
-	attr(rollingAvg, window) <- window
+	# remove na's unless requested to keep
+	if(dropNAs) {
+		eData <- dplyr::filter_at(eData, newColName,  dplyr::all_vars(!is.na(.)))
+	}
+	
+	attr(rollingAvg, "avgCol") <- newColName
+	attr(rollingAvg, "window") <- window
 	
 	return(rollingAvg)
 }
