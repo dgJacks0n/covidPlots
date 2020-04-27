@@ -4,11 +4,13 @@
 #' @param level value to group line plots
 #' @param value value for y-axis
 #' @param relativeDate use actual date (F) or days from first case (T) on x-axis
+#' @param usePlotly: make plot interactive with  plotly?
+#' 
+#' The following options only apply if usePlotly = T
 #' @param hKey (optional): value for highlightning interactive plots; 
 #' off if value is NA
 #' @param hGroupName (otpional): group name for highlighting interactive plots; 
 #' defaults to hGroup if specified.
-#' @param usePlotly: make plot interactive with  plotly?
 #' 
 #' @return plot object from ggplot2 or plotly
 #' 
