@@ -19,5 +19,7 @@ Imports:
 	forcats,
 	ggplot2,
 	plotly,
-	stringr
+	stringr,
+	zoo,
+	drake
 RoxygenNote: 7.1.0
