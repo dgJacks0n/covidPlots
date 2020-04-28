@@ -4,6 +4,7 @@
 #' Add population from 'getUsCountyPopulation' and calculate per capita case and death rates
 #' 
 #' @param dataUrl Source URL for data
+#' @param popData state-level population data from getUsStatePopulation
 #' 
 #' @return Data frame of case numbers and dates with attributes 'source' (dataUrl) and 'timestamp' (download time)
 #' 
@@ -11,7 +12,8 @@
 
 
 getUsStateCases <- function(dataUrl = 
-								"https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv") {
+								"https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv",
+								popData = getUsStatePopulation()) {
 
 	# load state-level data
 	stateData <- read.csv(dataUrl, header = T, stringsAsFactors = F)
@@ -27,11 +29,9 @@ getUsStateCases <- function(dataUrl =
 	
 	# add population estimates
 	# statePopulations <- getUsStatePopulation() %>% 
-	drake::loadd(statePopulations) %>%
-		dplyr::select(STATE, population = POPULATION)
+	popData <- dplyr::select(popData, STATE, population = POPULATION)
 	
-	stateData <- dplyr::left_join(stateData, 
-												 statePopulations ,
+	stateData <- dplyr::left_join(stateData, popData, 
 												 by = c("fips" = "STATE"))
 	
 	# calculate per capita case rates

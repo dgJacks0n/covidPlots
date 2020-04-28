@@ -4,13 +4,15 @@
 #' Add population from 'getUsCountyPopulation' and calculate per capita case and death rates
 #'
 #' @param dataUrl Source URL for county-level data
+#' @param popData County-level population data from getUsCountyPopulations
 #' 
 #' @return data frame of county-level data with attributes 'source' (dataUrl) and 'timestamp' (download time)
 #' 
 #' @export
 
 getUsCountyCases <- function(dataUrl = 
-														 	"https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv") {
+														 	"https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv",
+														 popData = getUsCountyPopulation()) {
 	# read data
 	countyData <- read.csv(dataUrl, header = T, stringsAsFactors = F,
 												 colClasses = c("fips"="character"))
@@ -30,12 +32,11 @@ getUsCountyCases <- function(dataUrl =
 	# add population and calculate per capita case and deathrates
 
 	#countyPopulations <- getUsCountyPopulation() %>% 
-	drake::loadd(countyPopulations) %>%
-		dplyr::select(FIPS, population = POPULATION)
+	popData <- dplyr::select(popData, FIPS, population = POPULATION)
 	
 	# merge with cases
 	countyData <- dplyr::left_join(countyData, 
-													countyPopulations,
+													popData,
 													by = c("fips" = "FIPS"))
 	
 	countyData$cases_per_capita <- with(countyData,  (cases/population))
