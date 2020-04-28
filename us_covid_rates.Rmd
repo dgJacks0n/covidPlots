@@ -84,14 +84,9 @@ and county-level case data downloaded from
 
 
 ```{r subset_last_Data}
-# get most recent data
-# lastStateData <- getLastStateData(stateData)
-# 
-# lastCountyData <- getLastCountyData(countyData)
+lastStateData <- getLastStateData(stateData)
 
-loadd(lastStateData)
-
-loadd(lastCountyData)
+lastCountyData <- getLastCountyData(countyData)
 
 ```
 
