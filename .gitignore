@@ -9,3 +9,6 @@ man
 man/*
 results/*
 .drake
+*.log
+*.png
+*.pdf
