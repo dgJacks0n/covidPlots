@@ -62,15 +62,11 @@ ggplot2::theme_set(theme_dj())
 
 
 ```{r load_caseData}
-# load state and county case data
+# load state and county case data from drake cache
 
-# stateData <- drake::readd(stateData)
-# 
-# countyData <- getUsCountyCases()
+drake::loadd(stateData)
 
-loadd(stateData)
-
-loadd(countyData)
+drake::loadd(countyData)
 
 ```
 
@@ -135,99 +131,28 @@ p_newCasesState
 
 ```
 
-```{r case_growth, eval = F}
-# rolling case growth vs time
-fit_cases <- function(vals) {
-	# assuming we have 1 obs per day
-	fitdata <- data.frame(index = 1:length(vals),
-												values = vals,
-												log10values = log10(vals)) %>%
-		filter(values > 0)
-	
-	if(nrow(fitdata) < 3) { return(NA) }
-	
-	# fit log10 values vs index
-	myfit <- try( lm(log10values ~ index, fitdata))
-	
-	if(class(myfit) != "lm") { return(NA) }
-	
-	# get slope and antilog
-	logslope <- coef(myfit)["index"]
-	
-	slope <- 10^logslope
+```{r case_doubling, eval = T}
+# Plot case doubling times
+dtPlot <- plotDoublingTime(stateData)
 
-	return(slope)
-}
-
-growthRate <- stateData %>%
-	group_by(state) %>%
-	arrange(date, .by_group = T) %>%
-	mutate(case_growth = rollapply(cases, 7, fit_cases, fill = NA, align = "right")) %>%
-	ungroup %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = case_growth, group = state)) +
-		geom_line() +
-	labs(x = "Date", y = "Fold Growth per Day", title = "Case Growth Rates", subtitle = "7 d average")
 
 # growthRate
 
-p_growthRate <- ggplotly(growthRate) %>%
-	highlight(dynamic = T, selectize = T, persistent = F,
+dtPlot <- dtPlot %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
 						on = "plotly_click",
 						defaultValues = highlightState)
 
-p_growthRate
+dtPlot
 ```
 
 ### US Case Map
 
-```{r caseMap, eval = F}
+```{r caseMap, eval = T}
 
-# get min and max values
-min_caserate <- min(floor(na.omit(log10(lastCountyData$casesPer100k + 0.1))))
-
-max_caserate <- max(ceiling(na.omit(log10(lastCountyData$casesPer100k))))
-
-p_caseMap <- plot_ly() 
-
-p_caseMap <- p_caseMap %>% add_trace(
-    type= "choroplethmapbox",
-    geojson = usMap,
-    locations = lastCountyData$fips,
-    z = log10(lastCountyData$casesPer100k + 0.1),
-    colorscale = "Viridis",
-    zmin = min_caserate,
-    zmax = max_caserate,
-    hoverinfo = "text",
-    text = paste(lastCountyData$state, "-",
-    						 lastCountyData$county, "<br>",
-    						 "Cases:", lastCountyData$cases, "<br>",
-    						 "Cases per 100k:", signif(lastCountyData$casesPer100k, 3)),
-    marker = list(line = list(
-    	width = 0),
-    	opacity = 0.5
-    )
-  )
-
-
-p_caseMap <- p_caseMap %>% layout(
-    mapbox = list(
-      style = "carto-positron",
-      zoom  = 2,
-      center = list(lon =  -95.71, lat = 37.09)),
-    title = "US Case Rate Map"
-)
-
-# title attribute works but tick labels don't
-p_caseMap <- p_caseMap %>% 
-	colorbar(
-		title = "log10 Cases<br>Per 100k",
-		tickmode = "array",
-		tickvalues = seq(min_caserate, max_caserate, by = 1),
-		ticktext = 10^seq(min_caserate, max_caserate, by = 1)
-)
-
+p_caseMap <- plotUsMap(lastCountyData, event = "cases_per_capita", map = usMap)
 p_caseMap 
+
 ```
 
 ### Deaths per Capita
@@ -236,10 +161,10 @@ p_deathsByState <- plotCurrentCount(lastStateData, xCol = "state",
 																	 value = "deaths_per_capita",
 																	 hGroupName = "byState")
 
-p_caseGrowthByState <- plotEventVTime(stateData, value = "deaths_per_capita",
+p_deathGrowthByState <- plotEventVTime(stateData, value = "deaths_per_capita",
 																			hGroupName = "byState")
 
-plotly::subplot(p_deathsByState, p_caseGrowthByState,
+plotly::subplot(p_deathsByState, p_deathGrowthByState,
 								widths = c(0.25, 0.75),
 								shareX = F, shareY = T,
 								which_layout = 1) %>%
@@ -261,56 +186,6 @@ p_newDeathsState <- plotNewEvents(stateData, event = "new_deaths",
 p_newDeathsState
 
 ```
-
-
-
-
-
-### Fatality Rate By State
-```{r state_deathsPerCase, eval = F}
-p_cfrByState <- lastStateData %>%
-	filter(deaths > 0) %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = cases, y = deaths)) +
-	stat_smooth(method = "lm", formula = y ~ x) +
-	geom_point() +
-	labs(title = "Cumulative Deaths vs. Cases",
-			 x = "Cases", y = "Deaths") +
-	scale_x_log10() +
-	scale_y_log10()
-
-ggplotly(p_cfrByState, tooltip = c("all")) %>%
-	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = F,
-						on = "plotly_click",
-  					defaultValues = highlightState)
-```
-
-```{r state_cfrByDate, eval = F}
-p_cfrByStateDate <- stateData %>%
-	filter(deaths > 0) %>%
-	highlight_key(~state, group = "byState") %>%
-	ggplot(aes(x = date, y = (deaths/cases), 
-						 group = state)) +
-	labs(title = "State Death Rates By Date", x = "Date",
-			 y = "Death Rate", color = "log10 Cases") +
-	geom_line()
-
-ggplotly(p_cfrByStateDate, tooltip = c("all")) %>%
-	hide_guides() %>%
-	highlight(dynamic = T, selectize = T, persistent = F,
-						on = "plotly_click",
-  					defaultValues = highlightState)
-```
-
----
-abstract: |
-	State and county-level case and death rates were downloaded
-	from the New York Times repository on
-	`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %Y")`.
-	This data contains `r sum(lastStateData$cases)` cases and
-	`r sum(lastStateData$deaths)` deaths in the US.
----
 
 # System information
 ```{r environment, results = "asis"}
