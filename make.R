@@ -11,6 +11,8 @@ optList <- list(
 							help = "Directory for knitted output"),
 	make_option(c("-f", "--format"), action = "store", default = "html",
 							help = "Format for knitted results - currently only HTML is supported"),
+	make_option(c("-l", "--logfile"), action = "store", default = "make.log",
+							help = "Logfile for make; set to 'none' to suppress logging"),
 	make_option(c("-u", "--update"), action = "store_true", default = F,
 							help = "Updae case counts only"),
 	make_option(c("-c", "--clean"), action = "store_true", default = F,
@@ -43,6 +45,8 @@ resultFile <- function(rmdFile, resDir, resType) {
 	return(resPath)
 }
 
+# do we need to suppress logfile?
+logfile <- ifelse(opt$logfile == "none", NULL, opt$logfile)
 
 # clean or update
 if(opt$clean) {
@@ -50,6 +54,7 @@ if(opt$clean) {
 	clean()
 } else {
 	if(opt$update) {
+		# update only removes case counts
 		clean(list = c("stateData", "countyData"))
 	}
 }
@@ -82,4 +87,4 @@ workGraph <- vis_drake_graph(plan)
 workGraph
 
 # run
-make(plan, lock_envir = F) # disabling lock_env is a 'bad thing'.  Need to debug
+drake::make(plan, envir = new.env(), log_make = logfile) 
