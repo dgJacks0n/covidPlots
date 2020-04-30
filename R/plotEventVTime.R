@@ -26,6 +26,9 @@ plotEventVTime <- function(pData, level = c("state", "county"),
 	
 	yVal <- match.arg(value)
 	
+	# remove any NA values
+	pData <- pData[!is.na(pData[[yVal]]), ]
+	
 	# use actual date or days from first case on X axis?
 	if(relativeDate) {
 		pData <- addRelativeDate(pData)
@@ -66,7 +69,7 @@ plotEventVTime <- function(pData, level = c("state", "county"),
 		ggplot2::ggplot(ggplot2::aes_(x = as.name(xCol), y = as.name(yVal))) +
 		ggplot2::geom_line(ggplot2::aes_(group = as.name(pGroup))) +
 		ggplot2::labs(title = pTitle, x = xLabel, y = yLabel) +
-		ggplot2::scale_y_log10()
+		ggplot2::scale_y_log10(na.value = 0)
 	
 	# If a static plot is wanted we're done
 	if(!usePlotly) {
