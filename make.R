@@ -1,6 +1,8 @@
+#!/usr/bin/Rscript
+
 # make.R
 # master script for use with drake package
-# run 'Rscript make.R -h' for usage.
+# run 'make.R -h' for usage.
 
 # packages
 library(optparse)

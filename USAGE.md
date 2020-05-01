@@ -1,9 +1,9 @@
 ## Usage
 
 Generation of these analyses is controlled by `drake` using the master script
-[make.R](./make.R) in this directory.  Run
+[make.R](./make.R) in this directory.  From a bash shell, run
 ```
-Rscript make.R -h
+./make.R -h
 ```
 for options and information
 
