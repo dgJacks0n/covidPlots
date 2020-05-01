@@ -4,4 +4,11 @@
 .Ruserdata
 *.html
 *.Rds
-data/*
+NAMESPACE
+man
+man/*
+results/*
+.drake
+*.log
+*.png
+*.pdf

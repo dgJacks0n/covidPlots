@@ -3,7 +3,7 @@ title: "COVID-19 Plots"
 author: "Donald Jackson"
 ---
 
-This repository contains code for graphing cases, deaths, and other data on the spread of the COVID-19 pandemic.  This code is intended for a combination of personal use and to explore new tools and approaches for data visualization using [plotly](https://plotly.com/r/)
+This repository contains code for graphing cases, deaths, and other data on the spread of the COVID-19 pandemic.  This code is intended for personal use and to explore data visualization using [plotly](https://plotly.com/r/) and for job control using [drake](https://github.com/ropensci/drake)
 
 ## Data Sources
 Data on US cases is from a compilation of US state and county-level rates provided by the New York Times at https://github.com/nytimes/covid-19-data.  The data is incorporated in this repository as a submodule; currently it needs to be updated manually.

@@ -1,0 +1,194 @@
+---
+title: "US Covid Rates"
+author: "Donald Jackson"
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 3
+params:
+  highlightState:
+    input: text
+    label: State to highlight
+    value: Massachusetts
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+											message = FALSE,
+											fig.path = paste(here::here(), "results", "us", "", sep = "/"))
+
+# get state to highlight
+highlightState <-  params$highlightState
+```
+
+# Objective
+
+Generate exploratory visualizations for US COVID-19 infection and death rates using data from the New York Times.
+
+# Procedure
+
+1. Load current state-level case and death data
+1. Load current county-level case and death data
+1. Load state and county-level population data from 2019 census and join to case and death datasets
+1. Load map coordinates for chloropleth maps
+1. Plot cases per capita at state level
+1. Map cases per capita at county level
+1. Plot deaths per capita at state level
+1. Plot deats versus cases at state level
+
+```{r packages}
+
+suppressPackageStartupMessages({
+	library(covidPlots)
+	library(envDocument)
+	library(here)
+	library(ggToys)
+	library(drake)
+
+})
+
+```
+
+```{r set_defaults}
+# set default ggplot theme
+ggplot2::theme_set(theme_dj())
+
+```
+
+## Data
+
+
+```{r load_caseData}
+# load state and county case data from drake cache
+
+drake::loadd(stateData)
+
+drake::loadd(countyData)
+
+```
+
+Using state-level case data downloaded from
+`r attr(stateData, "source")` at
+`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %Y %T")`
+and county-level case data downloaded from
+`r attr(countyData, "source")` at
+`r format.POSIXct(attr(countyData, "timestamp", "%B %d %Y %T"))`.
+
+
+
+```{r subset_last_Data}
+lastStateData <- getLastStateData(stateData)
+
+lastCountyData <- getLastCountyData(countyData)
+
+```
+
+```{r load_map}
+# load us map as json for chloropleth map
+# usMap <- getUsMap()
+
+loadd(usMap)
+
+```
+
+# Results
+
+## State-Level
+
+### Cases per Capita
+```{r cases_byStateDate}
+
+p_casesByState <- plotCurrentCount(lastStateData, xCol = "state",
+																	 value = "cases_per_capita",
+																	 hGroupName = "byState")
+
+p_caseGrowthByState <- plotEventVTime(stateData, value = "cases_per_capita",
+																			hGroupName = "byState")
+
+plotly::subplot(p_casesByState, p_caseGrowthByState,
+								widths = c(0.25, 0.75),
+								shareX = F, shareY = T,
+								which_layout = 1) %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+										on = "plotly_click",
+										defaultValues = highlightState)
+
+```
+
+```{r new_cases_by_state}
+# plot new cases as rolling average
+
+p_newCasesState <- plotNewEvents(stateData, event = "new_cases", 
+																 hGroupName = "byState") %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+p_newCasesState
+
+```
+
+```{r case_doubling, eval = T}
+# Plot case doubling times
+dtPlot <- plotDoublingTime(stateData)
+
+
+# growthRate
+
+dtPlot <- dtPlot %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+dtPlot
+```
+
+### US Case Map
+
+```{r caseMap, eval = T}
+
+p_caseMap <- plotUsMap(lastCountyData, event = "cases_per_capita", map = usMap)
+p_caseMap 
+
+```
+
+### Deaths per Capita
+```{r deaths_byStateDate}
+p_deathsByState <- plotCurrentCount(lastStateData, xCol = "state",
+																	 value = "deaths_per_capita",
+																	 hGroupName = "byState")
+
+p_deathGrowthByState <- plotEventVTime(stateData, value = "deaths_per_capita",
+																			hGroupName = "byState")
+
+plotly::subplot(p_deathsByState, p_deathGrowthByState,
+								widths = c(0.25, 0.75),
+								shareX = F, shareY = T,
+								which_layout = 1) %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+										on = "plotly_click",
+										defaultValues = highlightState)
+
+```
+
+```{r new_deaths_by_state}
+# plot new deaths as rolling average
+
+p_newDeathsState <- plotNewEvents(stateData, event = "new_deaths", 
+																 hGroupName = "byState") %>%
+	plotly::highlight(dynamic = T, selectize = T, persistent = F,
+						on = "plotly_click",
+						defaultValues = highlightState)
+
+p_newDeathsState
+
+```
+
+# System information
+```{r environment, results = "asis"}
+# summarize environment and session info
+env_doc("table")
+```

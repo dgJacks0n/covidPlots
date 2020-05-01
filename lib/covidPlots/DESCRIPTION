@@ -1,0 +1,26 @@
+Package: covidPlots
+Title: Plot US and Worldwide COVID-10 cases
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Donald",
+           family = "Jackson",
+           role = c("aut", "cre"),
+           email = "14615921+dgJacks0n@users.noreply.github.com",
+           comment = c(ORCID = "https://orcid.org/0000-0002-0863-9031"))
+Description: Load US and worldwide COVID case data, annotate and visualize.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.6.0)
+Imports: 
+	rjson (>= 0.2.20),
+	dplyr (>= 0.8.5),
+	magrittr (>= 1.5),
+	forcats (>= 0.5.0),
+	ggplot2 (>= 3.3.0),
+	plotly (>= 4.9.2),
+	stringr (>= 1.4.0),
+	zoo (>= 1.8.7),
+	drake (>= 7.12.0),
+	rmarkdown(>= 2.1)
+RoxygenNote: 7.1.0
