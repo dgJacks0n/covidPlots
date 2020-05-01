@@ -36,7 +36,7 @@ library(dplyr)
 # resultFile: generate output file based on input
 resultFile <- function(rmdFile, resDir, resType) {
 	# convert directory to relative path
-	resDir <- normalizePath(resDir, winslash = "/")
+	resDir <- normalizePath(resDir, winslash = "/", mustWork = F)
 	
 	newbase <- sub("\\.[A-Za-z]+$", "", basename(rmdFile))
 	
@@ -74,7 +74,7 @@ plan <- drake_plan(
 	usMap = getUsMap(),
 
 	rmarkdown::render(
-		knitr_in("./us_covid_rates.Rmd"),
+		knitr_in("./Rmarkdown/us_covid_rates.Rmd"),
 		output_file = file_out(!! resultFile("us_covid_rates.Rmd", 
 																				 opt$outdir, opt$format)),
 		envir = new.env(),
