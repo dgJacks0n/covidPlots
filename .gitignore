@@ -2,7 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-*.html
 *.Rds
 NAMESPACE
 man
@@ -12,3 +11,7 @@ results/*
 *.log
 *.png
 *.pdf
+*.docx
+*.pptx
+*.html
+
