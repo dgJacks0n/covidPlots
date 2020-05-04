@@ -7,4 +7,9 @@ Generation of these analyses is controlled by `drake` using the master script
 ```
 for options and information
 
+## Dependencies
+This code requires the [covidPlots](./lib/covidPlots/Description) package.  To install, run:
+```
+R CMD INSTALL lib/covidPlots 
+```
 
