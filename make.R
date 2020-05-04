@@ -28,9 +28,14 @@ opt <- parse_args(OptionParser(option_list = optList))
 # load additional packages
 library(drake)
 library(here)
-library(covidPlots)
 library(optparse)
 library(dplyr)
+
+# install covid plots if not already done
+if(!require(covidPlots)) {
+	install.packages("./lib/covidPlots", type = "source", repos = NULL)
+}
+library(covidPlots)
 
 # functions
 # resultFile: generate output file based on input
