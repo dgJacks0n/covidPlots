@@ -44,7 +44,7 @@ shinyServer(function(input, output) {
                         which_layout = 1) %>%
             plotly::highlight(dynamic = F, 
                               selectize = T, 
-                              color = c("red", "green", "blue"),
+                              color = c("red"),
                               persistent = T,
                               on = "plotly_click")
                           
@@ -73,5 +73,11 @@ shinyServer(function(input, output) {
     output$selectedStates <- renderText({
       req(selectedStates())
       paste("Selected States:", selectedStates())
+    })
+    
+    output$eventTable <- DT::renderDataTable({
+      req(selectedStates())
+      
+      filterEventData(lastStateData, selectedStates())
     })
 })

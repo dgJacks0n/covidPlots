@@ -2,6 +2,7 @@
 
 library(shiny)
 library(plotly)
+library(DT)
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
@@ -25,7 +26,8 @@ shinyUI(fluidPage(
         mainPanel(
             tabsetPanel(
                 tabPanel("Events", plotlyOutput("eventPlot"),
-                         textOutput("selectedStates")
+                         textOutput("selectedStates"),
+                         DT::dataTableOutput("eventTable")
                          #verbatimTextOutput("info")
                          ),
                 tabPanel("Map", plotlyOutput("eventMap"))
