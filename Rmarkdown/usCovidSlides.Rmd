@@ -1,0 +1,131 @@
+---
+title: "U.S. Covid-19 Cases and Deaths"
+author: "Donald Jackson"
+date: '`r format.Date(Sys.Date(), "%B %d %Y")`'
+output:
+  powerpoint_presentation:
+    reference_doc: slideTemplate.potx
+    slide_level: 2
+params:
+  highlightState:
+    input: text
+    label: State to highlight
+    value: Massachusetts
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+											message = FALSE,
+											fig.path = paste(here::here(), "results", "us", "", sep = "/"))
+
+# get state to highlight
+highlightState <-  params$highlightState
+```
+
+```{r packages}
+
+suppressPackageStartupMessages({
+	library(covidPlots)
+	library(envDocument)
+	library(here)
+	library(ggToys)
+	library(drake)
+	library(ggplot2)
+})
+
+```
+
+```{r set_defaults}
+# set default ggplot theme
+ggplot2::theme_set(theme_dj())
+
+```
+## Data
+```{r load_caseData}
+# load state and county case data from drake cache
+
+drake::loadd(stateData)
+
+drake::loadd(countyData)
+
+```
+
+Using state-level case data downloaded from
+`r attr(stateData, "source")` at
+`r format.POSIXct(attr(stateData, "timestamp"), "%B %d %Y %T")`
+and county-level case data downloaded from
+`r attr(countyData, "source")` at
+`r format.POSIXct(attr(countyData, "timestamp", "%B %d %Y %T"))`.
+
+
+
+```{r subset_last_Data}
+lastStateData <- getLastStateData(stateData)
+
+lastCountyData <- getLastCountyData(countyData)
+
+```
+
+```{r highlight_state}
+# define colormap to highlight specified state
+stateColor <- rep("grey50", nrow(lastStateData))
+
+names(stateColor) <- lastStateData[["state"]]
+
+stateColor[highlightState] <- 'red'
+
+colorByState <- ggplot2::scale_color_manual(values = stateColor, guide = F)
+```
+
+# State Level
+
+## Current Cases Per State
+:::::::::::::: {.columns}
+::: {.column}
+```{r cases_byStateDate}
+
+plotCurrentCount(lastStateData, xCol = "state",
+																	 value = "cases_per_capita",
+																	 usePlotly = F) +
+	ggplot2::aes(color = state) +
+	colorByState +
+	ggplot2::labs(caption = paste("Red:", highlightState))
+```
+:::
+::: {.column}
+
+```{r casesOverTime}
+plotEventVTime(stateData, value = "cases_per_capita", usePlotly = F) +
+	ggplot2::aes(color = state) +
+	colorByState +
+	ggplot2::labs(caption = paste("Red:" ,highlightState))
+
+```
+:::
+::::::::::::::
+
+## New Cases Per State
+```{r new_cases_by_state, warning=F}
+# plot new cases as rolling average
+
+suppressWarnings( plotNewEvents(stateData, event = "new_cases", usePlotly = F) +
+	ggplot2::aes(color = state) +
+	colorByState +
+  ggplot2::labs(caption = paste("Red:" ,highlightState))
+)
+
+```
+
+## Case Doubling Times
+```{r case_doubling, eval = T}
+# Plot case doubling times
+suppressWarnings(plotDoublingTime(stateData, usePlotly = F) +
+	ggplot2::aes(color = state) +
+	colorByState +
+	ggplot2::labs(caption = paste("Red:" ,highlightState))
+	)
+```
+
+# County Level
+
+
