@@ -62,7 +62,7 @@ if(opt$clean) {
 } else {
 	if(opt$update) {
 		# update only removes case counts
-		clean(list = c("stateData", "countyData"))
+		drake::clean(list = c("stateData", "countyData"))
 	}
 }
 
@@ -88,7 +88,7 @@ plan <- drake_plan(
 	
 	rmarkdown::render(
 		knitr_in("./Rmarkdown/usCovidSlides.Rmd"),
-		output_file = file_out(!! resultFile("usCovidSlides.Rmd", 
+		output_file = file_out(!! resultFile("usCovidSlides.Rmd",
 																				 opt$outdir, "pptx")),
 		envir = new.env(),
 		quiet = TRUE
