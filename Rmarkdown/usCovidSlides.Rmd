@@ -82,7 +82,7 @@ colorByState <- ggplot2::scale_color_manual(values = stateColor, guide = F)
 ## Current Cases Per State
 :::::::::::::: {.columns}
 ::: {.column}
-```{r cases_byStateDate}
+```{r cases_byStateDate, caption = "Current Cases per Capita"}
 
 plotCurrentCount(lastStateData, xCol = "state",
 																	 value = "cases_per_capita",
@@ -94,7 +94,7 @@ plotCurrentCount(lastStateData, xCol = "state",
 :::
 ::: {.column}
 
-```{r casesOverTime}
+```{r casesOverTime, caption = "Cases Per Capita Over Time"}
 plotEventVTime(stateData, value = "cases_per_capita", usePlotly = F) +
 	ggplot2::aes(color = state) +
 	colorByState +
@@ -105,7 +105,7 @@ plotEventVTime(stateData, value = "cases_per_capita", usePlotly = F) +
 ::::::::::::::
 
 ## New Cases Per State
-```{r new_cases_by_state, warning=F}
+```{r new_cases_by_state, warning=F, caption = "Average New Cases"}
 # plot new cases as rolling average
 
 suppressWarnings( plotNewEvents(stateData, event = "new_cases", usePlotly = F) +
