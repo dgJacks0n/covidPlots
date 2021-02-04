@@ -14,4 +14,4 @@ results/*
 *.docx
 *.pptx
 *.html
-
+lib/*.tar.gz
