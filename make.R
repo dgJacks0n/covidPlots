@@ -12,7 +12,7 @@ optList <- list(
 							default = "./results",
 							help = "Directory for knitted output"),
 	make_option(c("-f", "--format"), action = "store", default = "html",
-							help = "Format for knitted results - currently only HTML is supported"),
+							help = "Format for knitted results - currently only HTML is supported.  May be overridden by specific RMD files."),
 	make_option(c("-l", "--logfile"), action = "store", default = "make.log",
 							help = "Logfile for make; set to 'none' to suppress logging"),
 	make_option(c("-u", "--update"), action = "store_true", default = F,
@@ -28,9 +28,14 @@ opt <- parse_args(OptionParser(option_list = optList))
 # load additional packages
 library(drake)
 library(here)
-library(covidPlots)
 library(optparse)
 library(dplyr)
+
+# install covid plots if not already done
+if(!require(covidPlots)) {
+	install.packages("./lib/covidPlots", type = "source", repos = NULL)
+}
+library(covidPlots)
 
 # functions
 # resultFile: generate output file based on input
@@ -57,7 +62,7 @@ if(opt$clean) {
 } else {
 	if(opt$update) {
 		# update only removes case counts
-		clean(list = c("stateData", "countyData"))
+		drake::clean(list = c("stateData", "countyData"))
 	}
 }
 
@@ -77,6 +82,14 @@ plan <- drake_plan(
 		knitr_in("./Rmarkdown/us_covid_rates.Rmd"),
 		output_file = file_out(!! resultFile("us_covid_rates.Rmd", 
 																				 opt$outdir, opt$format)),
+		envir = new.env(),
+		quiet = TRUE
+	),
+	
+	rmarkdown::render(
+		knitr_in("./Rmarkdown/usCovidSlides.Rmd"),
+		output_file = file_out(!! resultFile("usCovidSlides.Rmd",
+																				 opt$outdir, "pptx")),
 		envir = new.env(),
 		quiet = TRUE
 	)

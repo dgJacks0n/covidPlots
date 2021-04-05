@@ -20,16 +20,13 @@ plotUsMap <- function(eData, event = c("cases_per_capita", "deaths_per_capita"),
 		type= "choroplethmapbox",
 		geojson = map,
 		locations = eData$fips,
-		z = eData[[myEvent]],
+		z = log10(eData[[myEvent]]),
 		colorscale = "Viridis",
 		hoverinfo = "text",
 		text = paste(eData$state, "-",
 								 eData$county, "<br>",
 								 myEventPretty, (1e05 * signif(eData[[myEvent]], 3)), "per 100k"),
-		marker = list(line = list(
-			width = 0),
-			opacity = 0.5
-		)
+		marker = list( opacity = 0.5)
 	)
 	
 	
@@ -42,12 +39,15 @@ plotUsMap <- function(eData, event = c("cases_per_capita", "deaths_per_capita"),
 	)
 	
 	# title attribute works but tick labels don't
+	vRange <- round(range(log10(eData[[myEvent]])))
+	vRangeSeq <- seq(vRange[1], vRange[2], by = 1)
+	
 	p_caseMap <- p_caseMap %>% 
 		plotly::colorbar(
-			title = myEventPretty
-			# tickmode = "array",
-			# tickvalues = seq(min_caserate, max_caserate, by = 1),
-			# ticktext = 10^seq(min_caserate, max_caserate, by = 1)
+			title = paste("log10", myEventPretty),
+			tickmode = "array",
+			tickvalues = vRangeSeq,
+			ticktext = 10^vRangeSeq
 		)
 	
 	return(p_caseMap)
