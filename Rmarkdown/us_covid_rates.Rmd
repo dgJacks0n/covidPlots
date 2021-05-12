@@ -46,6 +46,7 @@ suppressPackageStartupMessages({
 	library(envDocument)
 	library(here)
 	library(ggToys)
+	library(dplyr)
 	library(drake)
 
 })
@@ -186,6 +187,32 @@ p_newDeathsState <- plotNewEvents(stateData, event = "new_deaths",
 p_newDeathsState
 
 ```
+
+<!-- abstract in second yaml block - needs new line before and after separator plus indent -->
+
+```{r abstract_values, include = FALSE}
+# get summary values for abstract
+
+todaysData <- getLastStateData(stateData)
+
+# total new cases and deaths for US
+us_values <- todaysData %>% summarize(
+	new_cases = sum(new_cases),
+	new_deaths = sum(new_deaths)
+)
+
+# total new cases and deaths for selected state
+hStateData <- filter(todaysData, state == highlightState)
+
+```
+
+---
+abstract: |
+	On `r format.Date(Sys.Date(), "%B %d %Y")` the US reported 
+	`r us_values$new_cases` new COVID-19 cases
+	and `r us_values$new_deaths` new deaths.  `r highlightState` reported
+	`r hStateData$new_cases` new cases and `r hStateData$new_deaths` deaths.
+---
 
 # System information
 ```{r environment, results = "asis"}
