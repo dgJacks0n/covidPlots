@@ -126,6 +126,4 @@ suppressWarnings(plotDoublingTime(stateData, usePlotly = F) +
 	)
 ```
 
-# County Level
-
 
