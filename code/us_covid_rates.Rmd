@@ -45,7 +45,6 @@ suppressPackageStartupMessages({
 	library(covidPlots)
 	library(envDocument)
 	library(here)
-	library(ggToys)
 	library(dplyr)
 	library(drake)
 
@@ -55,7 +54,7 @@ suppressPackageStartupMessages({
 
 ```{r set_defaults}
 # set default ggplot theme
-ggplot2::theme_set(theme_dj())
+ggplot2::theme_set(theme_minimal())
 
 ```
 
