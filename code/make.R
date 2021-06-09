@@ -6,14 +6,19 @@
 
 # packages
 library(optparse)
+library(drake)
+library(here)
+library(dplyr)
+
 
 optList <- list(
 	make_option(c("-o", "--outdir"), action = "store", 
-							default = "./results",
+							default = paste(here(), "results", sep = "/"),
 							help = "Directory for knitted output"),
 	make_option(c("-f", "--format"), action = "store", default = "html",
 							help = "Format for knitted results - currently only HTML is supported.  May be overridden by specific RMD files."),
-	make_option(c("-l", "--logfile"), action = "store", default = "make.log",
+	make_option(c("-l", "--logfile"), action = "store", 
+							default = paste(here(), "results", "make.log", sep = "/"),
 							help = "Logfile for make; set to 'none' to suppress logging"),
 	make_option(c("-u", "--update"), action = "store_true", default = F,
 							help = "Updae case counts only"),
@@ -23,17 +28,10 @@ optList <- list(
 
 opt <- parse_args(OptionParser(option_list = optList))
 
-
-
-# load additional packages
-library(drake)
-library(here)
-library(optparse)
-library(dplyr)
-
 # install covid plots if not already done
 if(!require(covidPlots)) {
-	install.packages("./lib/covidPlots", type = "source", repos = NULL)
+	install.packages(paste(here(), "lib", "covidPlots_0.0.0.9000.tar.gz", sep = "/"), 
+									 type = "source", repos = NULL)
 }
 library(covidPlots)
 
@@ -79,7 +77,7 @@ plan <- drake_plan(
 	usMap = getUsMap(),
 
 	rmarkdown::render(
-		knitr_in("./Rmarkdown/us_covid_rates.Rmd"),
+		knitr_in(paste(here(), "code", "us_covid_rates.Rmd", sep = "/")),
 		output_file = file_out(!! resultFile("us_covid_rates.Rmd", 
 																				 opt$outdir, opt$format)),
 		envir = new.env(),
@@ -87,7 +85,7 @@ plan <- drake_plan(
 	),
 	
 	rmarkdown::render(
-		knitr_in("./Rmarkdown/usCovidSlides.Rmd"),
+		knitr_in(paste(here(), "code", "usCovidSlides.Rmd", sep = "/")),
 		output_file = file_out(!! resultFile("usCovidSlides.Rmd",
 																				 opt$outdir, "pptx")),
 		envir = new.env(),
